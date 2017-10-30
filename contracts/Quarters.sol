@@ -44,10 +44,10 @@ contract ERC20 {
 
 /*  ERC 20 token */
 contract StandardToken is ERC20 {
-	/**
-  * Internal transfer, only can be called by this contract
-  */
-  function _transfer(address _from, address _to, uint _value) internal {
+  /**
+   * Internal transfer, only can be called by this contract
+   */
+  function _transfer(address _from, address _to, uint _value) internal returns (bool success) {
     // Prevent transfer to 0x0 address. Use burn() instead
     require(_to != address(0));
     // Check if the sender has enough
@@ -63,49 +63,49 @@ contract StandardToken is ERC20 {
     Transfer(_from, _to, _value);
     // Asserts are used to use static analysis to find bugs in your code. They should never fail
     assert(balances[_from] + balances[_to] == previousBalances);
+
+    return true;
   }
 
-	/**
-  * Transfer tokens
-	*
-  * Send `_value` tokens to `_to` from your account
-	*
-  * @param _to The address of the recipient
-  * @param _value the amount to send
-  */
+  /**
+   * Transfer tokens
+   *
+   * Send `_value` tokens to `_to` from your account
+   *
+   * @param _to The address of the recipient
+   * @param _value the amount to send
+   */
   function transfer(address _to, uint256 _value) public returns (bool success) {
-    _transfer(msg.sender, _to, _value);
-		return true;
+    return _transfer(msg.sender, _to, _value);
   }
 
-	/**
-  * Transfer tokens from other address
-  *
-	* Send `_value` tokens to `_to` in behalf of `_from`
-	*
-  * @param _from The address of the sender
-  * @param _to The address of the recipient
-  * @param _value the amount to send
-  */
+  /**
+   * Transfer tokens from other address
+   *
+   * Send `_value` tokens to `_to` in behalf of `_from`
+   *
+   * @param _from The address of the sender
+   * @param _to The address of the recipient
+   * @param _value the amount to send
+   */
   function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
     require(_value <= allowed[_from][msg.sender]);     // Check allowance
     allowed[_from][msg.sender] -= _value;
-    _transfer(_from, _to, _value);
-    return true;
+    return _transfer(_from, _to, _value);
   }
 
   function balanceOf(address _owner) view public returns (uint256 balance) {
     return balances[_owner];
   }
 
-	/**
-  * Set allowance for other address
-	*
-  * Allows `_spender` to spend no more than `_value` tokens in your behalf
-	*
-  * @param _spender The address authorized to spend
-  * @param _value the max amount they can spend
-  */
+  /**
+   * Set allowance for other address
+   *
+   * Allows `_spender` to spend no more than `_value` tokens in your behalf
+   *
+   * @param _spender The address authorized to spend
+   * @param _value the max amount they can spend
+   */
   function approve(address _spender, uint256 _value) public returns (bool success) {
     allowed[msg.sender][_spender] = _value;
     Approval(msg.sender, _spender, _value);
@@ -126,24 +126,52 @@ contract Quarters is Ownable, StandardToken {
   string public symbol;
   uint8 public decimals = 18;
 
+  // ETH/USD rate
+  uint16 public ethRate;
+
   // 18 decimals is the strongly suggested default, avoid changing it
   uint256 public price;
   uint256 public tranche;
 
+  // List of developers
+  // address -> status
+  mapping (address => bool) public developers;
+
   uint256 public outstandingQuarters;
   uint256 public baseRate = 1;
+
+  // price values for next cycle
+  uint8 public priceNumerator = 3;
+  uint8 public priceDenominator = 2;
+
+  // price values for next cycle
+  uint8 public trancheNumerator = 2;
+  uint8 public trancheDenominator = 1;
+
+  // ETH rate changed
+  event EthRateChanged(uint16 currentRate, uint16 newRate);
 
   // This notifies clients about the amount burnt
   event Burn(address indexed from, uint256 value);
 
-  event TrancheIncrease(uint256 _tranche, uint256 _price, uint256 etherPool, uint256 _outstandingQuarters);
+  event DeveloperStatusChanged(address developer, bool status);
+  event TrancheIncreased(uint256 _tranche, uint256 _price, uint256 etherPool, uint256 _outstandingQuarters);
   event MegaEarnings(uint256 _tranche, uint256 etherPool, uint256 _outstandingQuarters, uint256 _baseRate);
+  event Withdraw(uint256 _tranche, uint256 etherPool, uint256 _outstandingQuarters, uint256 _baseRate);
 
   /**
-  * Constrctor function
-  *
-  * Initializes contract with initial supply tokens to the owner of the contract
-  */
+   * developer modifier
+   */
+  modifier onlyActiveDeveloper() {
+    require(developers[msg.sender] == true);
+    _;
+  }
+
+  /**
+   * Constrctor function
+   *
+   * Initializes contract with initial supply tokens to the owner of the contract
+   */
   function TokenERC20(
     uint256 initialSupply,
     string tokenName,
@@ -160,15 +188,44 @@ contract Quarters is Ownable, StandardToken {
     tranche = firstTranche; // number of Quarters to be sold before increasing price
   }
 
-	/**
-  * Set allowance for other address and notify
-  *
-  * Allows `_spender` to spend no more than `_value` tokens in your behalf, and then ping the contract about it
-  *
-  * @param _spender The address authorized to spend
-  * @param _value the max amount they can spend
-  * @param _extraData some extra information to send to the approved contract
-  */
+  function setEthRate (uint16 rate) onlyOwner public {
+    EthRateChanged(ethRate, rate);
+    ethRate = rate;
+  }
+
+  /**
+   * adjust price for next cycle
+   */
+  function adjustPrice (uint8 numerator, uint8 denominator) onlyOwner public {
+    priceNumerator = numerator;
+    priceDenominator = denominator;
+  }
+
+  /**
+   * adjust tranche for next cycle
+   */
+  function adjustTranche (uint8 numerator, uint8 denominator) onlyOwner public {
+    trancheNumerator = numerator;
+    trancheDenominator = denominator;
+  }
+
+  /**
+   * Developer status
+   */
+  function setDeveloperStatus (address _address, bool status) onlyOwner public {
+    developers[_address] = status;
+    DeveloperStatusChanged(_address, status);
+  }
+
+  /**
+   * Set allowance for other address and notify
+   *
+   * Allows `_spender` to spend no more than `_value` tokens in your behalf, and then ping the contract about it
+   *
+   * @param _spender The address authorized to spend
+   * @param _value the max amount they can spend
+   * @param _extraData some extra information to send to the approved contract
+   */
   function approveAndCall(address _spender, uint256 _value, bytes _extraData)
   public
   returns (bool success) {
@@ -177,15 +234,17 @@ contract Quarters is Ownable, StandardToken {
       spender.receiveApproval(msg.sender, _value, this, _extraData);
       return true;
     }
+
+    return false;
   }
 
   /**
-  * Destroy tokens
-	*
-  * Remove `_value` tokens from the system irreversibly
-	*
-  * @param _value the amount of money to burn
-  */
+   * Destroy tokens
+   *
+   * Remove `_value` tokens from the system irreversibly
+   *
+   * @param _value the amount of money to burn
+   */
   function burn(uint256 _value) public returns (bool success) {
     require(balances[msg.sender] >= _value);   // Check if the sender has enough
     balances[msg.sender] -= _value;            // Subtract from the sender
@@ -195,13 +254,13 @@ contract Quarters is Ownable, StandardToken {
   }
 
   /**
-  * Destroy tokens from other account
-  *
-  * Remove `_value` tokens from the system irreversibly on behalf of `_from`.
-  *
-  * @param _from the address of the sender
-  * @param _value the amount of money to burn
-  */
+   * Destroy tokens from other account
+   *
+   * Remove `_value` tokens from the system irreversibly on behalf of `_from`.
+   *
+   * @param _from the address of the sender
+   * @param _value the amount of money to burn
+   */
   function burnFrom(address _from, uint256 _value) public returns (bool success) {
     require(balances[_from] >= _value);                // Check if the targeted balance is enough
     require(_value <= allowed[_from][msg.sender]);     // Check allowance
@@ -212,60 +271,74 @@ contract Quarters is Ownable, StandardToken {
     return true;
   }
 
+  /**
+   * Buy quarters by sending ethers to contract address (no data required)
+   */
+  function () payable public {
+    buy();
+  }
+
   function buy() payable public {
-    uint256 nq = msg.value*300/price/1000000000000000;    // 300 is a placeholder for the Ether/USD exchange rate
+    uint256 nq = (msg.value * ethRate) / price / 1000000000000000;
     if (nq > tranche) {
       nq = tranche;
     }
-    totalSupply = totalSupply + nq;
-    balances[msg.sender] = balances[msg.sender] + nq;
-    outstandingQuarters+=nq;
-    baseRate = this.balance/(outstandingQuarters+1);
-    if (totalSupply>tranche) {
-      tranche = 2*tranche;   // magic number: tranche size
-      price = price * 3 /2;   // magic number: price increase number
-      TrancheIncrease( tranche,  price,  this.balance, outstandingQuarters);
+
+    totalSupply += nq;
+    balances[msg.sender] += nq;
+    outstandingQuarters += nq;
+
+    baseRate = this.balance / (outstandingQuarters + 1);
+
+    if (totalSupply > tranche) {
+      // change tranche size for next cycle
+      tranche = (tranche * trancheNumerator) / trancheDenominator;
+
+      // change price for next cycle
+      price = (price * priceNumerator) / priceDenominator;
+
+      // fire event for tranche change
+      TrancheIncreased( tranche, price, this.balance, outstandingQuarters);
     }
-    owner.transfer(msg.value/10);
+    owner.transfer(msg.value / 10);
   }
 
-  // what happens when totalSupply reaches maximum --> let the totalSupply, tranche & price increase rate be settable by the owner
+  function withdraw(uint256 value) onlyActiveDeveloper public {
+    require (balances[msg.sender] >= value);
+    balances[msg.sender] -= value;
 
-  // what happens if price gets too low?
-
-  // creating the economic flow in the ethereum
-  // gaming community -- token for the games, dice game,
-
-  function withdraw(uint256 _value) public {
-    // ** check if developer
-    uint256 n = _value;
-    if (n > balances[msg.sender]) {      // can only request to redeem Quarters that you have
-      n = balances[msg.sender];
-    }
-    balances[msg.sender] -= n;
-    uint256 earnings = n*baseRate;
-    uint256 rate = 25;          // else, rate for micro developer
-    if (n*20 > tranche) {       // size of mega developer
-      rate = 150;           // rate for mega developer
-    } else if (n*100 > tranche) {   // size & rate for large developer
-      rate = 90;
-    } else if (n*2000 > tranche) {  // size and rate for medium developer
-      rate = 75;
-    } else if (n*50000 > tranche){  // size and rate for small developer
-      rate=50;
-    }
-
-    if (rate * earnings / 100 > this.balance) {
+    uint256 earnings = value * baseRate;
+    uint256 rate = getRate(value); // get rate from value and tranche
+    if (((rate * earnings) / 100) > this.balance) {
       earnings = this.balance;
     } else {
-      earnings = rate*earnings/100;
+      earnings = rate * earnings / 100;
     }
 
-    outstandingQuarters -= n;        // update the outstanding Quarters
-    baseRate = (this.balance-earnings) / (outstandingQuarters+1);
+    outstandingQuarters -= value; // update the outstanding Quarters
+    baseRate = (this.balance - earnings) / (outstandingQuarters + 1);
     if (rate == 150) {
       MegaEarnings(tranche, this.balance, outstandingQuarters, baseRate);
     }
-    msg.sender.transfer(earnings);  // get your earnings!
+
+    // event for withdraw
+    Withdraw(tranche, this.balance, outstandingQuarters, baseRate);
+
+    // earning for developers
+    msg.sender.transfer(earnings);
+  }
+
+  function getRate (uint256 value) view public returns (uint16) {
+    if (value * 20 > tranche) {  // size & rate for mega developer
+      return 150;
+    } else if (value * 100 > tranche) {   // size & rate for large developer
+      return 90;
+    } else if (value * 2000 > tranche) {  // size and rate for medium developer
+      return 75;
+    } else if (value * 50000 > tranche){  // size and rate for small developer
+      return 50;
+    }
+
+    return 25; // rate for micro developer
   }
 }
