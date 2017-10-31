@@ -122,16 +122,16 @@ contract StandardToken is ERC20 {
 
 contract Quarters is Ownable, StandardToken {
   // Public variables of the token
-  string public name;
-  string public symbol;
+  string public name="Quarters";
+  string public symbol="Q";
   uint8 public decimals = 18;
 
   // ETH/USD rate
-  uint16 public ethRate;
+  uint16 public ethRate=300;
 
   // 18 decimals is the strongly suggested default, avoid changing it
   uint256 public price;
-  uint256 public tranche;
+  uint256 public tranche=1000000; // Number of Quarters in initial tranche
 
   // List of developers
   // address -> status
@@ -147,7 +147,19 @@ contract Quarters is Ownable, StandardToken {
   // price values for next cycle
   uint8 public trancheNumerator = 2;
   uint8 public trancheDenominator = 1;
-
+  
+  // initial multiples, rates (as percentages) for tiers of developers
+  
+  uint8 public mega = 20;
+  uint8 public megaRate = 150;
+  uint8 public large = 100;
+  uint8 public largeRate = 90;
+  uint8 public medium = 2000;
+  uint8 public mediumRate = 75;
+  uint8 public small = 50000;
+  uint8 public smallRate = 50;
+  uint8 public microRate = 25;
+  
   // ETH rate changed
   event EthRateChanged(uint16 currentRate, uint16 newRate);
 
@@ -189,24 +201,57 @@ contract Quarters is Ownable, StandardToken {
   }
 
   function setEthRate (uint16 rate) onlyOwner public {
-    EthRateChanged(ethRate, rate);
-    ethRate = rate;
+  // Ether price is set in Wei
+    if (rate>0) {
+      EthRateChanged(ethRate, rate);
+      ethRate = rate;
+    }
   }
 
   /**
    * adjust price for next cycle
    */
   function adjustPrice (uint8 numerator, uint8 denominator) onlyOwner public {
-    priceNumerator = numerator;
-    priceDenominator = denominator;
+    if ((numerator>0) and (demoninator>0)) {
+      priceNumerator = numerator;
+      priceDenominator = denominator;
+    }
   }
+  
+  function adjustWithdrawRate(uint8 mega2, uint8 megaRate2, uint8 large2, uint8 largeRate2, uint8 medium2, uint8 mediumRate2, uint8 small2, uint8 smallRate2, uint8 microRate2) onlyOwner public {
+ 
+ // the values (mega, large, medium, small) are multiples, e.g., 20x, 100x, 10000x
+ // the rates (megaRate, etc.) are percentage points, e.g., 150 is 150% of the remaining etherPool
 
+   if ((mega2>0) and megaRate2>0) {
+      mega = mega2;
+      megaRate = megaRate2;
+    }
+    if ((large2>0) and (largeRate2>0)) {
+      large = large2;
+      largeRate = largeRate2;
+    }
+    if ((medium2>0) and (mediumRate2>0) {
+      medium = medium2;
+      mediumRate = mediumRate2;
+    }
+    if ((small2>0) and (smallRate2>0)){
+      small = small2;
+      smallRate = smallRate2;
+    }
+    if (microRate2>0) {
+      microRate = microRate2;
+    }
+  }
+  
   /**
    * adjust tranche for next cycle
    */
   function adjustTranche (uint8 numerator, uint8 denominator) onlyOwner public {
-    trancheNumerator = numerator;
-    trancheDenominator = denominator;
+     if ((numerator>0) and (demoninator>0)) {
+        trancheNumerator = numerator;
+        trancheDenominator = denominator;
+     }
   }
 
   /**
@@ -279,7 +324,7 @@ contract Quarters is Ownable, StandardToken {
   }
 
   function buy() payable public {
-    uint256 nq = (msg.value * ethRate) / price / 1000000000000000;
+    uint256 nq = (msg.value * ethRate) / price ;
     if (nq > tranche) {
       nq = tranche;
     }
@@ -329,16 +374,16 @@ contract Quarters is Ownable, StandardToken {
   }
 
   function getRate (uint256 value) view public returns (uint16) {
-    if (value * 20 > tranche) {  // size & rate for mega developer
-      return 150;
-    } else if (value * 100 > tranche) {   // size & rate for large developer
-      return 90;
-    } else if (value * 2000 > tranche) {  // size and rate for medium developer
-      return 75;
-    } else if (value * 50000 > tranche){  // size and rate for small developer
-      return 50;
+    if (value * mega > tranche) {  // size & rate for mega developer
+      return megaRate;
+    } else if (value * large > tranche) {   // size & rate for large developer
+      return largeRate;
+    } else if (value * medium > tranche) {  // size and rate for medium developer
+      return mediumRate;
+    } else if (value * small > tranche){  // size and rate for small developer
+      return smallRate;
     }
 
-    return 25; // rate for micro developer
+    return microRate; // rate for micro developer
   }
 }
