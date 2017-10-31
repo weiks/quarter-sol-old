@@ -2,10 +2,12 @@ import assertThrows from "./helpers/assertThrows";
 
 let Quarters = artifacts.require("./Quarters.sol");
 
+const BigNumber = web3.BigNumber;
+
 contract("Quarters", function(accounts) {
   const initialSupply = web3.toWei("100"); // initialSupply = 100 quarters
-  const initialPrice = web3.toWei("0.0003"); // initial price of quarter = 0.0001 ETH (10k quarters for $300)
-  const firstTranche = web3.toWei(20000); // first tranche value -> 20000 quarters
+  const initialPrice = 1000; // initial price of quarter (300k quarters for 1 ETH at USD 300)
+  const firstTranche = web3.toWei(900000); // first tranche value -> 900k quarters
 
   describe("initialization", async function() {
     let contract; // contract with account 0
@@ -243,6 +245,75 @@ contract("Quarters", function(accounts) {
       assert.equal(log.args.status, true);
       isDeveloper = await contract.developers(accounts[7]);
       assert.equal(isDeveloper, true);
+    });
+  });
+
+  //
+  // Buy tokens
+  //
+  describe("buy", async function() {
+    let contract; // contract with account 0
+    let ethRate = 300;
+
+    // runs before test cases
+    before(async function() {
+      contract = await Quarters.new(
+        initialSupply,
+        "Quarters",
+        "Q",
+        initialPrice,
+        firstTranche,
+        { from: accounts[0] } // `from` key is important to change transaction creator
+      );
+
+      // set eth price to 300 dollars
+      await contract.setEthRate(ethRate, { from: accounts[0] });
+    });
+
+    // case 1
+    describe("no of quarters < tranche size", async function() {
+      it("should get equivalent tokens for ethers and owner", async function() {
+        // fetch current owner's balance
+        let currentOwnerBalance = await web3.eth.getBalance(accounts[0]);
+        let etherValue = web3.toWei(1); // 1 ether -> should get 10k tokens
+        let expectedQuarters = new BigNumber(etherValue)
+          .mul(ethRate)
+          .mul(initialPrice);
+        let expectedOwnerEarnings = new BigNumber(etherValue).div(10);
+
+        let receipt = await contract.sendTransaction({
+          from: accounts[2],
+          value: etherValue
+        }); // directly without any method call
+
+        assert.equal(receipt.logs.length, 1);
+        let log = receipt.logs[0];
+        assert.equal(log.event, "QuartersOrdered");
+        assert.equal(log.args.sender, accounts[2]);
+        assert.equal(log.args.ethValue.eq(etherValue), true);
+        assert.equal(log.args.tokens.eq(expectedQuarters), true);
+
+        // check quarter balance of sender
+        let senderBalance = await contract.balanceOf(accounts[2]);
+        assert.equal(expectedQuarters.eq(senderBalance), true);
+
+        // check balance of sender
+        let ownerETHBalance = await web3.eth.getBalance(accounts[0]);
+        assert.equal(
+          ownerETHBalance.minus(currentOwnerBalance).eq(expectedOwnerEarnings),
+          true
+        );
+      });
+
+      it("should get proper totalSupply", async function() {
+        let senderBalance = await contract.balanceOf(accounts[2]);
+        let totalSupply = await contract.totalSupply();
+
+        assert.equal(
+          totalSupply.eq(new BigNumber(initialSupply).plus(senderBalance)),
+          true
+        );
+      });
     });
   });
 });

@@ -140,8 +140,8 @@ contract Quarters is Ownable, StandardToken {
   uint256 public baseRate = 1;
 
   // price values for next cycle
-  uint8 public priceNumerator = 3;
-  uint8 public priceDenominator = 2;
+  uint8 public priceNumerator = 2;
+  uint8 public priceDenominator = 3;
 
   // price values for next cycle
   uint8 public trancheNumerator = 2;
@@ -164,6 +164,7 @@ contract Quarters is Ownable, StandardToken {
   // This notifies clients about the amount burnt
   event Burn(address indexed from, uint256 value);
 
+  event QuartersOrdered(address sender, uint256 ethValue, uint256 tokens);
   event DeveloperStatusChanged(address developer, bool status);
   event TrancheIncreased(uint256 _tranche, uint256 _price, uint256 etherPool, uint256 _outstandingQuarters);
   event MegaEarnings(uint256 _tranche, uint256 etherPool, uint256 _outstandingQuarters, uint256 _baseRate);
@@ -321,7 +322,7 @@ contract Quarters is Ownable, StandardToken {
   }
 
   function buy() payable public {
-    uint256 nq = (msg.value * ethRate) / price ;
+    uint256 nq = (msg.value * ethRate) * price;
     if (nq > tranche) {
       nq = tranche;
     }
@@ -340,9 +341,12 @@ contract Quarters is Ownable, StandardToken {
       price = (price * priceNumerator) / priceDenominator;
 
       // fire event for tranche change
-      TrancheIncreased( tranche, price, this.balance, outstandingQuarters);
+      TrancheIncreased(tranche, price, this.balance, outstandingQuarters);
     }
     owner.transfer(msg.value / 10);
+
+    // event for quarters order (invoice)
+    QuartersOrdered(msg.sender, msg.value, nq);
   }
 
   function withdraw(uint256 value) onlyActiveDeveloper public {
