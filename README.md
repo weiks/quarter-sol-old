@@ -3,20 +3,24 @@
 **How to install?**
 ```sh
  $ yarn install
- $ yarn run truffle test # Run test cases
 ```
 
-**How to deploy?**
+**Development environment**
+```sh
+ $ yarn run testrpc # keep this running
+ # open second terminal
+ $ yarn run test # Run all test cases
+
+
+ # Just to compile and deploy
+ $ yarn run truffle compile
+ $ yarn run truffle deploy
+```
+
+**How to deploy Ethereum network?**
 
 Deploy on Ropsten network:
 
 ```sh
  $ yarn run truffle deploy --network ropsten
-```
-
-**Development environment**
-```sh
- $ yarn run test # To start Test RPC Ethereum client
- $ yarn run truffle compile
- $ yarn run truffle deploy
 ```
