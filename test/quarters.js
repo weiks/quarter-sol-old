@@ -275,7 +275,7 @@ contract("Quarters", function(accounts) {
       it("should get equivalent tokens for ethers and owner", async function() {
         // fetch current owner's balance
         let currentOwnerBalance = await web3.eth.getBalance(accounts[0]);
-        let etherValue = web3.toWei(1); // 1 ether -> should get 10k tokens
+        let etherValue = web3.toWei(1); // 1 ether -> should get 300k tokens
         let expectedQuarters = new BigNumber(etherValue)
           .mul(ethRate)
           .mul(initialPrice);
@@ -305,14 +305,146 @@ contract("Quarters", function(accounts) {
         );
       });
 
-      it("should get proper totalSupply", async function() {
+      it("should set proper totalSupply, price, tranche", async function() {
         let senderBalance = await contract.balanceOf(accounts[2]);
-        let totalSupply = await contract.totalSupply();
+        let newTotalSupply = new BigNumber(initialSupply).plus(senderBalance);
 
+        let [totalSupply, price, tranche] = await Promise.all([
+          contract.totalSupply(),
+          contract.price(),
+          contract.tranche()
+        ]);
+        assert.equal(totalSupply.eq(newTotalSupply), true);
+        assert.equal(price.eq(initialPrice), true);
+        assert.equal(tranche.eq(firstTranche), true);
+      });
+    });
+
+    // case 2
+    describe("no of quarters >= tranche size", async function() {
+      it("1. same as tranche: should get tokens size of tranche for ethers and owner gets cut", async function() {
+        // fetch current owner's balance
+        let currentOwnerBalance = await web3.eth.getBalance(accounts[0]);
+        let [
+          currentTotalSupply,
+          currentPrice,
+          currentTranche
+        ] = await Promise.all([
+          contract.totalSupply(),
+          contract.price(),
+          contract.tranche()
+        ]);
+
+        let etherValue = web3.toWei(3); // 3 ether -> should get 900k tokens
+        let expectedQuarters = new BigNumber(etherValue)
+          .mul(ethRate)
+          .mul(initialPrice);
+        let expectedOwnerEarnings = new BigNumber(etherValue).div(10);
+
+        let receipt = await contract.buy({
+          from: accounts[3],
+          value: etherValue
+        }); // buy method
+
+        assert.equal(receipt.logs.length, 2);
+        let log = receipt.logs[0];
+        assert.equal(log.event, "TrancheIncreased");
+
+        let expectedTrache = new BigNumber(currentTranche).mul(2);
+        assert.equal(log.args._tranche.eq(expectedTrache), true);
+        assert.equal(log.args._price.toNumber(), 666, true);
+
+        log = receipt.logs[1];
+        assert.equal(log.event, "QuartersOrdered");
+        assert.equal(log.args.sender, accounts[3]);
+        assert.equal(log.args.ethValue.eq(etherValue), true);
+        assert.equal(log.args.tokens.eq(expectedQuarters), true);
+
+        // check quarter balance of sender
+        let senderBalance = await contract.balanceOf(accounts[3]);
+        assert.equal(expectedQuarters.eq(senderBalance), true);
+
+        // check balance of sender
+        let ownerETHBalance = await web3.eth.getBalance(accounts[0]);
         assert.equal(
-          totalSupply.eq(new BigNumber(initialSupply).plus(senderBalance)),
+          ownerETHBalance.minus(currentOwnerBalance).eq(expectedOwnerEarnings),
           true
         );
+
+        // check totalSupply, price and tranche
+        let [totalSupply, price, tranche] = await Promise.all([
+          contract.totalSupply(),
+          contract.price(),
+          contract.tranche()
+        ]);
+        assert.equal(
+          totalSupply.eq(currentTotalSupply.add(expectedQuarters)),
+          true
+        ); // new totalSupply = totalSupply + nq (expectedQuarters)
+        assert.equal(price.toNumber(), 666, true); // new price = price * 2 / 3
+        assert.equal(tranche.eq(currentTranche.mul(2)), true); // new tranche = tranche * 2 / 1
+      });
+
+      it("2. more than tranche: should get tokens size of tranche for ethers and owner gets cut", async function() {
+        // fetch current owner's balance
+        let currentOwnerBalance = await web3.eth.getBalance(accounts[0]);
+        let [
+          currentTotalSupply,
+          currentPrice,
+          currentTranche
+        ] = await Promise.all([
+          contract.totalSupply(),
+          contract.price(),
+          contract.tranche()
+        ]);
+
+        let etherValue = web3.toWei(10); // 10 ether -> should get 1,998,000 quarters but will get 1,800,000 quarters
+        let expectedQuarters = currentTranche;
+        let expectedOwnerEarnings = new BigNumber(etherValue).div(10);
+
+        let receipt = await contract.buy({
+          from: accounts[4],
+          value: etherValue
+        }); // buy method
+
+        assert.equal(receipt.logs.length, 2);
+        let log = receipt.logs[0];
+        assert.equal(log.event, "TrancheIncreased");
+
+        let expectedTrache = new BigNumber(currentTranche).mul(2);
+        assert.equal(log.args._tranche.eq(expectedTrache), true);
+        assert.equal(log.args._price.toNumber(), 444, true);
+
+        log = receipt.logs[1];
+        assert.equal(log.event, "QuartersOrdered");
+        assert.equal(log.args.sender, accounts[4]);
+        assert.equal(log.args.ethValue.eq(etherValue), true);
+        assert.equal(log.args.tokens.eq(expectedQuarters), true);
+
+        // check quarter balance of sender
+        let senderBalance = await contract.balanceOf(accounts[4]);
+        assert.equal(expectedQuarters.eq(senderBalance), true);
+
+        // check balance of sender
+        let ownerETHBalance = await web3.eth.getBalance(accounts[0]);
+        assert.equal(
+          ownerETHBalance.minus(currentOwnerBalance).eq(expectedOwnerEarnings),
+          true
+        );
+
+        // check totalSupply, price and tranche
+        let [totalSupply, price, tranche] = await Promise.all([
+          contract.totalSupply(),
+          contract.price(),
+          contract.tranche()
+        ]);
+        assert.equal(
+          totalSupply.eq(currentTotalSupply.add(expectedQuarters)),
+          true
+        ); // new totalSupply = totalSupply + nq (expectedQuarters)
+        assert.equal(price.toNumber(), 444, true); // new price = price * 2 / 3
+        assert.equal(tranche.eq(currentTranche.mul(2)), true); // new tranche = tranche * 2 / 1
+        assert.equal(tranche.eq(web3.toWei(3600000)), true); // around 3600k
       });
     });
   });
