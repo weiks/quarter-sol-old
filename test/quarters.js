@@ -3,13 +3,13 @@ import assertThrows from "./helpers/assertThrows";
 let Quarters = artifacts.require("./Quarters.sol");
 
 contract("Quarters", function(accounts) {
+  const initialSupply = web3.toWei("100"); // initialSupply = 100 quarters
+  const initialPrice = web3.toWei("0.0003"); // initial price of quarter = 0.0001 ETH (10k quarters for $300)
+  const firstTranche = web3.toWei(20000); // first tranche value -> 20000 quarters
+
   describe("initialization", async function() {
     let contract; // contract with account 0
     let contract1; // contract with account 1
-
-    const initialSupply = web3.toWei("100"); // initialSupply = 100 quarters
-    const initialPrice = web3.toWei("0.0003"); // initial price of quarter = 0.0001 ETH (10k quarters for $300)
-    const firstTranche = web3.toWei(10); // first tranche value -> 10 quarters
 
     // runs before test cases
     before(async function() {
@@ -48,11 +48,11 @@ contract("Quarters", function(accounts) {
         contract.price(),
         contract.tranche()
       ]);
-      assert.equal(totalSupply, initialSupply);
+      assert.equal(totalSupply.eq(initialSupply), true);
       assert.equal(name, "Quarters");
       assert.equal(symbol, "Q1");
-      assert.equal(price, initialPrice);
-      assert.equal(tranche, firstTranche);
+      assert.equal(price.eq(initialPrice), true);
+      assert.equal(tranche.eq(firstTranche), true);
 
       // check for second contract
       [totalSupply, name, symbol, price, tranche] = await Promise.all([
@@ -62,20 +62,16 @@ contract("Quarters", function(accounts) {
         contract1.price(),
         contract1.tranche()
       ]);
-      assert.equal(totalSupply, initialSupply);
+      assert.equal(totalSupply.eq(initialSupply), true);
       assert.equal(name, "Quarters");
       assert.equal(symbol, "Q2");
-      assert.equal(price, initialPrice);
-      assert.equal(tranche, firstTranche);
+      assert.equal(price.eq(initialPrice), true);
+      assert.equal(tranche.eq(firstTranche), true);
     });
   });
 
   describe("eth price", async function() {
     let contract; // contract with account 0
-
-    const initialSupply = web3.toWei("100"); // initialSupply = 100 quarters
-    const initialPrice = web3.toWei("0.0003"); // initial price of quarter = 0.0001 ETH (10k quarters for $300)
-    const firstTranche = web3.toWei(10); // first tranche value -> 10 quarters
 
     // runs before test cases
     before(async function() {
@@ -128,10 +124,6 @@ contract("Quarters", function(accounts) {
   describe("transfer ownership", async function() {
     let contract; // contract with account 0
 
-    const initialSupply = web3.toWei("100"); // initialSupply = 100 quarters
-    const initialPrice = web3.toWei("0.0003"); // initial price of quarter = 0.0001 ETH (10k quarters for $300)
-    const firstTranche = web3.toWei(10); // first tranche value -> 10 quarters
-
     // runs before test cases
     before(async function() {
       contract = await Quarters.new(
@@ -162,7 +154,11 @@ contract("Quarters", function(accounts) {
       assert.equal(owner, accounts[1]);
 
       // check if eth price can not be set by accounts[0]
-      assertThrows(contract.setEthRate(300, { from: accounts[0] }));
+      assertThrows(contract.setEthRate(350, { from: accounts[0] }));
+
+      // check rate if it's not changed
+      let newRate = await contract.ethRate();
+      assert.equal(newRate.eq(300), true);
 
       // check if eth price can be set by accounts[1]
       receipt = await contract.setEthRate(350, { from: accounts[1] });
@@ -189,6 +185,64 @@ contract("Quarters", function(accounts) {
 
       owner = await contract.owner();
       assert.equal(owner, accounts[1]);
+    });
+  });
+
+  describe("developers", async function() {
+    let contract; // contract with account 0
+
+    // runs before test cases
+    before(async function() {
+      contract = await Quarters.new(
+        initialSupply,
+        "Quarters",
+        "Q",
+        initialPrice,
+        firstTranche,
+        { from: accounts[0] } // `from` key is important to change transaction creator
+      );
+    });
+
+    it("should not allow others to change eth price", async function() {
+      assertThrows(
+        contract.setDeveloperStatus(accounts[6], true, { from: accounts[1] })
+      );
+      assertThrows(
+        contract.setDeveloperStatus(accounts[7], true, { from: accounts[2] })
+      );
+    });
+
+    it("should allow only owner to change developer status", async function() {
+      // let's take accounts 6,7 & 8 as developers
+      let isDeveloper = await contract.developers(accounts[6]);
+      assert.equal(isDeveloper, false);
+
+      isDeveloper = await contract.developers(accounts[7]);
+      assert.equal(isDeveloper, false);
+
+      // add accounts[6] as developer
+      let receipt = await contract.setDeveloperStatus(accounts[6], true, {
+        from: accounts[0]
+      });
+      assert.equal(receipt.logs.length, 1);
+      let log = receipt.logs[0];
+      assert.equal(log.event, "DeveloperStatusChanged");
+      assert.equal(log.args.developer, accounts[6]);
+      assert.equal(log.args.status, true);
+      isDeveloper = await contract.developers(accounts[6]);
+      assert.equal(isDeveloper, true);
+
+      // add accounts[7] as developer
+      receipt = await contract.setDeveloperStatus(accounts[7], true, {
+        from: accounts[0]
+      });
+      assert.equal(receipt.logs.length, 1);
+      log = receipt.logs[0];
+      assert.equal(log.event, "DeveloperStatusChanged");
+      assert.equal(log.args.developer, accounts[7]);
+      assert.equal(log.args.status, true);
+      isDeveloper = await contract.developers(accounts[7]);
+      assert.equal(isDeveloper, true);
     });
   });
 });
