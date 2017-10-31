@@ -147,19 +147,18 @@ contract Quarters is Ownable, StandardToken {
   // price values for next cycle
   uint8 public trancheNumerator = 2;
   uint8 public trancheDenominator = 1;
-  
+
   // initial multiples, rates (as percentages) for tiers of developers
-  
-  uint8 public mega = 20;
-  uint8 public megaRate = 150;
-  uint8 public large = 100;
-  uint8 public largeRate = 90;
-  uint8 public medium = 2000;
-  uint8 public mediumRate = 75;
-  uint8 public small = 50000;
-  uint8 public smallRate = 50;
-  uint8 public microRate = 25;
-  
+  uint32 public mega = 20;
+  uint32 public megaRate = 150;
+  uint32 public large = 100;
+  uint32 public largeRate = 90;
+  uint32 public medium = 2000;
+  uint32 public mediumRate = 75;
+  uint32 public small = 50000;
+  uint32 public smallRate = 50;
+  uint32 public microRate = 25;
+
   // ETH rate changed
   event EthRateChanged(uint16 currentRate, uint16 newRate);
 
@@ -212,46 +211,46 @@ contract Quarters is Ownable, StandardToken {
    * adjust price for next cycle
    */
   function adjustPrice (uint8 numerator, uint8 denominator) onlyOwner public {
-    if ((numerator>0) and (demoninator>0)) {
-      priceNumerator = numerator;
-      priceDenominator = denominator;
-    }
+    require(numerator > 0 && denominator > 0);
+    priceNumerator = numerator;
+    priceDenominator = denominator;
   }
-  
-  function adjustWithdrawRate(uint8 mega2, uint8 megaRate2, uint8 large2, uint8 largeRate2, uint8 medium2, uint8 mediumRate2, uint8 small2, uint8 smallRate2, uint8 microRate2) onlyOwner public {
- 
- // the values (mega, large, medium, small) are multiples, e.g., 20x, 100x, 10000x
- // the rates (megaRate, etc.) are percentage points, e.g., 150 is 150% of the remaining etherPool
 
-   if ((mega2>0) and megaRate2>0) {
+  function adjustWithdrawRate(uint32 mega2, uint32 megaRate2, uint32 large2, uint32 largeRate2, uint32 medium2, uint32 mediumRate2, uint32 small2, uint32 smallRate2, uint32 microRate2) onlyOwner public {
+    // the values (mega, large, medium, small) are multiples, e.g., 20x, 100x, 10000x
+    // the rates (megaRate, etc.) are percentage points, e.g., 150 is 150% of the remaining etherPool
+    if (mega2 > 0 && megaRate2 > 0) {
       mega = mega2;
       megaRate = megaRate2;
     }
-    if ((large2>0) and (largeRate2>0)) {
+
+    if (large2 > 0 && largeRate2 > 0) {
       large = large2;
       largeRate = largeRate2;
     }
-    if ((medium2>0) and (mediumRate2>0) {
+
+    if (medium2 > 0 && mediumRate2 > 0) {
       medium = medium2;
       mediumRate = mediumRate2;
     }
-    if ((small2>0) and (smallRate2>0)){
+
+    if (small2 > 0 && smallRate2 > 0){
       small = small2;
       smallRate = smallRate2;
     }
-    if (microRate2>0) {
+
+    if (microRate2 > 0) {
       microRate = microRate2;
     }
   }
-  
+
   /**
    * adjust tranche for next cycle
    */
   function adjustTranche (uint8 numerator, uint8 denominator) onlyOwner public {
-     if ((numerator>0) and (demoninator>0)) {
-        trancheNumerator = numerator;
-        trancheDenominator = denominator;
-     }
+    require(numerator > 0 && denominator > 0);
+    trancheNumerator = numerator;
+    trancheDenominator = denominator;
   }
 
   /**
@@ -362,7 +361,7 @@ contract Quarters is Ownable, StandardToken {
 
     outstandingQuarters -= value; // update the outstanding Quarters
     baseRate = (this.balance - earnings) / (outstandingQuarters + 1);
-    if (rate == 150) {
+    if (rate == megaRate) {
       MegaEarnings(tranche, this.balance, outstandingQuarters, baseRate);
     }
 
@@ -373,7 +372,7 @@ contract Quarters is Ownable, StandardToken {
     msg.sender.transfer(earnings);
   }
 
-  function getRate (uint256 value) view public returns (uint16) {
+  function getRate (uint256 value) view public returns (uint32) {
     if (value * mega > tranche) {  // size & rate for mega developer
       return megaRate;
     } else if (value * large > tranche) {   // size & rate for large developer
