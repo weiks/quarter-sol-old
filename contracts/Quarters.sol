@@ -122,16 +122,15 @@ contract StandardToken is ERC20 {
 
 contract Quarters is Ownable, StandardToken {
   // Public variables of the token
-  string public name="Quarters";
-  string public symbol="Q";
+  string public name = "Quarters";
+  string public symbol = "Q";
   uint8 public decimals = 18;
 
   // ETH/USD rate
-  uint16 public ethRate=300;
+  uint16 public ethRate = 300;
 
-  // 18 decimals is the strongly suggested default, avoid changing it
   uint256 public price;
-  uint256 public tranche=1000000; // Number of Quarters in initial tranche
+  uint256 public tranche = 1000000; // Number of Quarters in initial tranche
 
   // List of developers
   // address -> status
@@ -183,7 +182,7 @@ contract Quarters is Ownable, StandardToken {
    *
    * Initializes contract with initial supply tokens to the owner of the contract
    */
-  function TokenERC20(
+  function Quarters(
     uint256 initialSupply,
     string tokenName,
     string tokenSymbol,
@@ -200,11 +199,10 @@ contract Quarters is Ownable, StandardToken {
   }
 
   function setEthRate (uint16 rate) onlyOwner public {
-  // Ether price is set in Wei
-    if (rate>0) {
-      EthRateChanged(ethRate, rate);
-      ethRate = rate;
-    }
+    // Ether price is set in Wei
+    require(rate > 0);
+    EthRateChanged(ethRate, rate);
+    ethRate = rate;
   }
 
   /**
