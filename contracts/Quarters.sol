@@ -209,10 +209,15 @@ contract Quarters is Ownable, StandardToken {
   /**
    * adjust price for next cycle
    */
-  function adjustPrice (uint8 numerator, uint8 denominator) onlyOwner public {
+  function adjustNextPrice (uint8 numerator, uint8 denominator) onlyOwner public {
     require(numerator > 0 && denominator > 0);
     priceNumerator = numerator;
     priceDenominator = denominator;
+  }
+  
+  function adjustPrice (uint256 price2) onlyOwner public {
+      require(price2>0);
+      price=price2;
   }
 
   function adjustWithdrawRate(uint32 mega2, uint32 megaRate2, uint32 large2, uint32 largeRate2, uint32 medium2, uint32 mediumRate2, uint32 small2, uint32 smallRate2, uint32 microRate2) onlyOwner public {
@@ -246,11 +251,16 @@ contract Quarters is Ownable, StandardToken {
   /**
    * adjust tranche for next cycle
    */
-  function adjustTranche (uint8 numerator, uint8 denominator) onlyOwner public {
+  function adjustNextTranche (uint8 numerator, uint8 denominator) onlyOwner public {
     require(numerator > 0 && denominator > 0);
     trancheNumerator = numerator;
     trancheDenominator = denominator;
   }
+
+function adjustTranche(uint256 tranche2) onlyOwner public {
+    require(tranche2>0);
+    tranche = tranche2;
+}
 
   /**
    * Developer status
