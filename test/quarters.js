@@ -445,7 +445,57 @@ contract("Quarters", function(accounts) {
         assert.equal(price.toNumber(), 444, true); // new price = price * 2 / 3
         assert.equal(tranche.eq(currentTranche.mul(2)), true); // new tranche = tranche * 2 / 1
         assert.equal(tranche.eq(web3.toWei(3600000)), true); // around 3600k
+
+        console.log(
+          web3.fromWei(await web3.eth.getBalance(contract.address)).toString()
+        );
+        console.log(web3.fromWei(await contract.baseRate()).toString());
+        console.log(
+          web3.fromWei(await contract.outstandingQuarters()).toString()
+        );
       });
+    });
+  });
+
+  //
+  // Withdraw
+  //
+  describe("withdraw", async function() {
+    let contract; // contract with account 0
+    let ethRate = 300;
+
+    // runs before test cases
+    before(async function() {
+      contract = await Quarters.new(
+        initialSupply,
+        "Quarters",
+        "Q",
+        initialPrice,
+        firstTranche,
+        { from: accounts[0] } // `from` key is important to change transaction creator
+      );
+
+      // set eth price to 300 dollars
+      await contract.setEthRate(ethRate, { from: accounts[0] });
+    });
+
+    it("should not allow non-developer to withdraw", async function() {
+      assertThrows(contract.withdraw(web3.toWei(100), { from: accounts[6] })); // 100 tokens
+      assertThrows(contract.withdraw(web3.toWei(500), { from: accounts[7] })); // 500 tokens
+    });
+
+    it("should not allow developer to withdraw with no balance", async function() {
+      // make accounts[6] developer
+      await contract.setDeveloperStatus(accounts[6], true, {
+        from: accounts[0]
+      });
+
+      assertThrows(contract.withdraw(web3.toWei(100), { from: accounts[6] })); // 100 tokens
+    });
+
+    // developers
+    describe("developers", async function() {
+      before(async function() {});
     });
   });
 });
