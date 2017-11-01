@@ -449,7 +449,7 @@ contract("Quarters", function(accounts) {
         console.log(
           web3.fromWei(await web3.eth.getBalance(contract.address)).toString()
         );
-        console.log(web3.fromWei(await contract.baseRate()).toString());
+        console.log(web3.fromWei(await contract.getBaseRate()).toString());
         console.log(
           web3.fromWei(await contract.outstandingQuarters()).toString()
         );
@@ -477,6 +477,11 @@ contract("Quarters", function(accounts) {
 
       // set eth price to 300 dollars
       await contract.setEthRate(ethRate, { from: accounts[0] });
+
+      // buy quarters
+      await contract.buy({ from: accounts[2], value: web3.toWei(1) }); // 1 ether
+      await contract.buy({ from: accounts[3], value: web3.toWei(3) }); // 3 ethers
+      await contract.buy({ from: accounts[4], value: web3.toWei(10) }); // 10 ethers
     });
 
     it("should not allow non-developer to withdraw", async function() {
@@ -492,6 +497,8 @@ contract("Quarters", function(accounts) {
 
       assertThrows(contract.withdraw(web3.toWei(100), { from: accounts[6] })); // 100 tokens
     });
+
+    it("should have proper buying rate for types of devleopers", async function() {});
 
     // developers
     describe("developers", async function() {

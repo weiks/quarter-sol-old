@@ -130,14 +130,13 @@ contract Quarters is Ownable, StandardToken {
   uint16 public ethRate = 300;
 
   uint256 public price;
-  uint256 public tranche = 1000000; // Number of Quarters in initial tranche
+  uint256 public tranche = 1000000 * (10 ** 18); // Number of Quarters in initial tranche
 
   // List of developers
   // address -> status
   mapping (address => bool) public developers;
 
   uint256 public outstandingQuarters;
-  uint256 public baseRate = 1;
 
   // price values for next cycle
   uint8 public priceNumerator = 2;
@@ -214,10 +213,10 @@ contract Quarters is Ownable, StandardToken {
     priceNumerator = numerator;
     priceDenominator = denominator;
   }
-  
+
   function adjustPrice (uint256 price2) onlyOwner public {
-      require(price2>0);
-      price=price2;
+      require(price2 > 0);
+      price = price2;
   }
 
   function adjustWithdrawRate(uint32 mega2, uint32 megaRate2, uint32 large2, uint32 largeRate2, uint32 medium2, uint32 mediumRate2, uint32 small2, uint32 smallRate2, uint32 microRate2) onlyOwner public {
@@ -258,7 +257,7 @@ contract Quarters is Ownable, StandardToken {
   }
 
 function adjustTranche(uint256 tranche2) onlyOwner public {
-    require(tranche2>0);
+    require(tranche2 > 0);
     tranche = tranche2;
 }
 
@@ -341,8 +340,6 @@ function adjustTranche(uint256 tranche2) onlyOwner public {
     balances[msg.sender] += nq;
     outstandingQuarters += nq;
 
-    baseRate = this.balance / (outstandingQuarters + 1);
-
     if (totalSupply > tranche) {
       // change tranche size for next cycle
       tranche = (tranche * trancheNumerator) / trancheDenominator;
@@ -360,17 +357,22 @@ function adjustTranche(uint256 tranche2) onlyOwner public {
   }
 
   function withdraw(uint256 value) onlyActiveDeveloper public {
-    require (balances[msg.sender] >= value);
-    balances[msg.sender] -= value;
+    require(balances[msg.sender] >= value);
+    require(outstandingQuarters > 0);
+
+    uint256 baseRate = getBaseRate();
+    require(baseRate > 0); // check if base rate > 0
 
     uint256 earnings = value * baseRate;
     uint256 rate = getRate(value); // get rate from value and tranche
-    if (((rate * earnings) / 100) > this.balance) {
+    uint256 earningsWithBonus = (rate * earnings) / 100;
+    if (earningsWithBonus > this.balance) {
       earnings = this.balance;
     } else {
-      earnings = rate * earnings / 100;
+      earnings = earningsWithBonus;
     }
 
+    balances[msg.sender] -= value;
     outstandingQuarters -= value; // update the outstanding Quarters
     baseRate = (this.balance - earnings) / (outstandingQuarters + 1);
     if (rate == megaRate) {
@@ -382,6 +384,10 @@ function adjustTranche(uint256 tranche2) onlyOwner public {
 
     // earning for developers
     msg.sender.transfer(earnings);
+  }
+
+  function getBaseRate () view public returns (uint256) {
+    return this.balance / (outstandingQuarters + 1);
   }
 
   function getRate (uint256 value) view public returns (uint32) {
