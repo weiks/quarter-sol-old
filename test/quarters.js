@@ -5,9 +5,9 @@ let Quarters = artifacts.require("./Quarters.sol");
 const BigNumber = web3.BigNumber;
 
 contract("Quarters", function(accounts) {
-  const initialSupply = web3.toWei("100"); // initialSupply = 100 quarters
+  const initialSupply = 100; // initialSupply = 100 quarters
   const initialPrice = 1000; // initial price of quarter (300k quarters for 1 ETH at USD 300)
-  const firstTranche = web3.toWei(900000); // first tranche value -> 900k quarters
+  const firstTranche = 900000; // first tranche value -> 900k quarters
 
   describe("initialization", async function() {
     let contract; // contract with account 0
@@ -276,9 +276,9 @@ contract("Quarters", function(accounts) {
         // fetch current owner's balance
         let currentOwnerBalance = await web3.eth.getBalance(accounts[0]);
         let etherValue = web3.toWei(1); // 1 ether -> should get 300k tokens
-        let expectedQuarters = new BigNumber(etherValue)
-          .mul(ethRate)
-          .mul(initialPrice);
+        let expectedQuarters = web3.fromWei(
+          new BigNumber(etherValue).mul(ethRate).mul(initialPrice)
+        );
         let expectedOwnerEarnings = new BigNumber(etherValue).div(10);
 
         let receipt = await contract.sendTransaction({
@@ -336,9 +336,9 @@ contract("Quarters", function(accounts) {
         ]);
 
         let etherValue = web3.toWei(3); // 3 ether -> should get 900k tokens
-        let expectedQuarters = new BigNumber(etherValue)
-          .mul(ethRate)
-          .mul(initialPrice);
+        let expectedQuarters = web3.fromWei(
+          new BigNumber(etherValue).mul(ethRate).mul(initialPrice)
+        );
         let expectedOwnerEarnings = new BigNumber(etherValue).div(10);
 
         let receipt = await contract.buy({
@@ -444,15 +444,13 @@ contract("Quarters", function(accounts) {
         ); // new totalSupply = totalSupply + nq (expectedQuarters)
         assert.equal(price.toNumber(), 444, true); // new price = price * 2 / 3
         assert.equal(tranche.eq(currentTranche.mul(2)), true); // new tranche = tranche * 2 / 1
-        assert.equal(tranche.eq(web3.toWei(3600000)), true); // around 3600k
+        assert.equal(tranche.eq(3600000), true); // around 3600k
 
         console.log(
           web3.fromWei(await web3.eth.getBalance(contract.address)).toString()
         );
         console.log(web3.fromWei(await contract.getBaseRate()).toString());
-        console.log(
-          web3.fromWei(await contract.outstandingQuarters()).toString()
-        );
+        console.log((await contract.outstandingQuarters()).toString());
       });
     });
   });

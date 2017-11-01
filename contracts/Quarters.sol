@@ -124,13 +124,13 @@ contract Quarters is Ownable, StandardToken {
   // Public variables of the token
   string public name = "Quarters";
   string public symbol = "Q";
-  uint8 public decimals = 18;
+  uint8 public decimals = 0; // no decimals, only integer quarters
 
   // ETH/USD rate
   uint16 public ethRate = 300;
 
   uint256 public price;
-  uint256 public tranche = 1000000 * (10 ** 18); // Number of Quarters in initial tranche
+  uint256 public tranche = 1000000; // Number of Quarters in initial tranche
 
   // List of developers
   // address -> status
@@ -331,7 +331,7 @@ function adjustTranche(uint256 tranche2) onlyOwner public {
   }
 
   function buy() payable public {
-    uint256 nq = (msg.value * ethRate) * price;
+    uint256 nq = (msg.value * ethRate * price) / (10 ** 18);
     if (nq > tranche) {
       nq = tranche;
     }
@@ -358,7 +358,6 @@ function adjustTranche(uint256 tranche2) onlyOwner public {
 
   function withdraw(uint256 value) onlyActiveDeveloper public {
     require(balances[msg.sender] >= value);
-    require(outstandingQuarters > 0);
 
     uint256 baseRate = getBaseRate();
     require(baseRate > 0); // check if base rate > 0
@@ -374,20 +373,23 @@ function adjustTranche(uint256 tranche2) onlyOwner public {
 
     balances[msg.sender] -= value;
     outstandingQuarters -= value; // update the outstanding Quarters
-    baseRate = (this.balance - earnings) / (outstandingQuarters + 1);
     if (rate == megaRate) {
-      MegaEarnings(tranche, this.balance, outstandingQuarters, baseRate);
+      MegaEarnings(tranche, this.balance, outstandingQuarters, baseRate); // with current base rate
     }
 
     // event for withdraw
-    Withdraw(tranche, this.balance, outstandingQuarters, baseRate);
+    Withdraw(tranche, this.balance, outstandingQuarters, baseRate);  // with current base rate
 
     // earning for developers
     msg.sender.transfer(earnings);
   }
 
   function getBaseRate () view public returns (uint256) {
-    return this.balance / (outstandingQuarters + 1);
+    if (outstandingQuarters > 0) {
+      return this.balance / outstandingQuarters;
+    }
+
+    return this.balance;
   }
 
   function getRate (uint256 value) view public returns (uint32) {
