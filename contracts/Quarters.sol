@@ -163,11 +163,11 @@ contract Quarters is Ownable, StandardToken {
   // This notifies clients about the amount burnt
   event Burn(address indexed from, uint256 value);
 
-  event QuartersOrdered(address sender, uint256 ethValue, uint256 tokens);
-  event DeveloperStatusChanged(address developer, bool status);
-  event TrancheIncreased(uint256 _tranche, uint256 _price, uint256 etherPool, uint256 _outstandingQuarters);
-  event MegaEarnings(uint256 _tranche, uint256 etherPool, uint256 _outstandingQuarters, uint256 _baseRate);
-  event Withdraw(uint256 _tranche, uint256 etherPool, uint256 _outstandingQuarters, uint256 _baseRate);
+  event QuartersOrdered(address indexed sender, uint256 ethValue, uint256 tokens);
+  event DeveloperStatusChanged(address indexed developer, bool status);
+  event TrancheIncreased(uint256 _tranche, uint256 _price, uint256 _etherPool, uint256 _outstandingQuarters);
+  event MegaEarnings(address indexed developer, uint256 value, uint256 _baseRate, uint256 _tranche, uint256 _outstandingQuarters, uint256 _etherPool);
+  event Withdraw(address indexed developer, uint256 value, uint256 _baseRate, uint256 _tranche, uint256 _outstandingQuarters, uint256 _etherPool);
 
   /**
    * developer modifier
@@ -373,12 +373,14 @@ function adjustTranche(uint256 tranche2) onlyOwner public {
 
     balances[msg.sender] -= value;
     outstandingQuarters -= value; // update the outstanding Quarters
+
+    uint256 etherPool = this.balance - earnings;
     if (rate == megaRate) {
-      MegaEarnings(tranche, this.balance, outstandingQuarters, baseRate); // with current base rate
+      MegaEarnings(msg.sender, earnings, baseRate, tranche, outstandingQuarters, etherPool); // with current base rate
     }
 
     // event for withdraw
-    Withdraw(tranche, this.balance, outstandingQuarters, baseRate);  // with current base rate
+    Withdraw(msg.sender, earnings, baseRate, tranche, outstandingQuarters, etherPool);  // with current base rate
 
     // earning for developers
     msg.sender.transfer(earnings);
