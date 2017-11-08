@@ -327,17 +327,23 @@ function adjustTranche(uint256 tranche2) onlyOwner public {
    * Buy quarters by sending ethers to contract address (no data required)
    */
   function () payable public {
-    buy();
+    buyFor(msg.sender);
   }
 
   function buy() payable public {
+    buyFor(msg.sender);
+  }
+
+  function buyFor(address buyer) payable public {
+    require(buyer != address(0));
+
     uint256 nq = (msg.value * ethRate * price) / (10 ** 18);
     if (nq > tranche) {
       nq = tranche;
     }
 
     totalSupply += nq;
-    balances[msg.sender] += nq;
+    balances[buyer] += nq;
     outstandingQuarters += nq;
 
     if (totalSupply > tranche) {
@@ -353,7 +359,7 @@ function adjustTranche(uint256 tranche2) onlyOwner public {
     owner.transfer(msg.value / 10);
 
     // event for quarters order (invoice)
-    QuartersOrdered(msg.sender, msg.value, nq);
+    QuartersOrdered(buyer, msg.value, nq);
   }
 
   function withdraw(uint256 value) onlyActiveDeveloper public {
