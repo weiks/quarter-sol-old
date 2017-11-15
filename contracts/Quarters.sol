@@ -256,10 +256,10 @@ contract Quarters is Ownable, StandardToken {
     trancheDenominator = denominator;
   }
 
-function adjustTranche(uint256 tranche2) onlyOwner public {
-    require(tranche2 > 0);
-    tranche = tranche2;
-}
+  function adjustTranche(uint256 tranche2) onlyOwner public {
+      require(tranche2 > 0);
+      tranche = tranche2;
+  }
 
   /**
    * Developer status
@@ -327,17 +327,27 @@ function adjustTranche(uint256 tranche2) onlyOwner public {
    * Buy quarters by sending ethers to contract address (no data required)
    */
   function () payable public {
-    buyFor(msg.sender);
+    _buy(msg.sender);
   }
 
   function buy() payable public {
-    buyFor(msg.sender);
+    _buy(msg.sender);
   }
 
   function buyFor(address buyer) payable public {
+    uint256 _value =  _buy(buyer);
+
+    // allow donor (msg.sender) to spend buyer's tokens
+    allowed[buyer][msg.sender] += _value;
+    Approval(buyer, msg.sender, _value);
+  }
+
+  // returns number of quarters buyer got
+  function _buy(address buyer) internal returns (uint256) {
     require(buyer != address(0));
 
     uint256 nq = (msg.value * ethRate * price) / (10 ** 18);
+    require(nq != 0);
     if (nq > tranche) {
       nq = tranche;
     }
@@ -360,6 +370,32 @@ function adjustTranche(uint256 tranche2) onlyOwner public {
 
     // event for quarters order (invoice)
     QuartersOrdered(buyer, msg.value, nq);
+
+    // return nq
+    return nq;
+  }
+
+  /**
+   * Transfer allowance from other address's allowance
+   *
+   * Send `_value` tokens to `_to` in behalf of `_from`
+   *
+   * @param _from The address of the sender
+   * @param _to The address of the recipient
+   * @param _value the amount to send
+   */
+  function transferAllowance(address _from, address _to, uint256 _value) public returns (bool success) {
+    require(_value <= allowed[_from][msg.sender]);     // Check allowance
+    allowed[_from][msg.sender] -= _value;
+
+    if (_transfer(_from, _to, _value)) {
+      // allow msg.sender to spend _to's tokens
+      allowed[_to][msg.sender] += _value;
+      Approval(_to, msg.sender, _value);
+      return true;
+    }
+
+    return false;
   }
 
   function withdraw(uint256 value) onlyActiveDeveloper public {
