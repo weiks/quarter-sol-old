@@ -168,6 +168,7 @@ contract Quarters is Ownable, StandardToken {
   event TrancheIncreased(uint256 _tranche, uint256 _price, uint256 _etherPool, uint256 _outstandingQuarters);
   event MegaEarnings(address indexed developer, uint256 value, uint256 _baseRate, uint256 _tranche, uint256 _outstandingQuarters, uint256 _etherPool);
   event Withdraw(address indexed developer, uint256 value, uint256 _baseRate, uint256 _tranche, uint256 _outstandingQuarters, uint256 _etherPool);
+  event BaseRateChanged(uint256 _baseRate, uint256 _tranche, uint256 _outstandingQuarters, uint256 _etherPool,  uint256 _totalSupply);
 
   /**
    * developer modifier
@@ -301,7 +302,11 @@ contract Quarters is Ownable, StandardToken {
     require(balances[msg.sender] >= _value);   // Check if the sender has enough
     balances[msg.sender] -= _value;            // Subtract from the sender
     totalSupply -= _value;                     // Updates totalSupply
+    outstandingQuarters -= _value;              // Update outstanding quarters
     Burn(msg.sender, _value);
+
+    // log rate change
+    BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, this.balance, totalSupply);
     return true;
   }
 
@@ -318,8 +323,12 @@ contract Quarters is Ownable, StandardToken {
     require(_value <= allowed[_from][msg.sender]);     // Check allowance
     balances[_from] -= _value;                         // Subtract from the targeted balance
     allowed[_from][msg.sender] -= _value;              // Subtract from the sender's allowance
-    totalSupply -= _value;                             // Update totalSupply
+    totalSupply -= _value;                      // Update totalSupply
+    outstandingQuarters -= _value;              // Update outstanding quarters
     Burn(_from, _value);
+
+    // log rate change
+    BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, this.balance, totalSupply);
     return true;
   }
 
@@ -370,6 +379,9 @@ contract Quarters is Ownable, StandardToken {
 
     // event for quarters order (invoice)
     QuartersOrdered(buyer, msg.value, nq);
+
+    // log rate change
+    BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, this.balance, totalSupply);
 
     // return nq
     return nq;
@@ -426,6 +438,9 @@ contract Quarters is Ownable, StandardToken {
 
     // earning for developers
     msg.sender.transfer(earnings);
+
+    // log rate change
+    BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, this.balance, totalSupply);
   }
 
   function getBaseRate () view public returns (uint256) {
