@@ -157,6 +157,10 @@ contract Quarters is Ownable, StandardToken {
   uint32 public smallRate = 50;
   uint32 public microRate = 25;
 
+  // rewards related storage
+  mapping (address => uint256) public rewards;
+  uint256 public rewardAmount = 2000;
+
   // ETH rate changed
   event EthRateChanged(uint16 currentRate, uint16 newRate);
 
@@ -205,6 +209,13 @@ contract Quarters is Ownable, StandardToken {
     EthRateChanged(ethRate, rate);
     ethRate = rate;
   }
+
+  /**
+   * Adjust reward amount
+   */
+   function adjustReward (uint256 reward) onlyOwner public {
+     rewardAmount = reward; // may be zero, no need to check value to 0
+   }
 
   /**
    * adjust price for next cycle
@@ -260,6 +271,21 @@ contract Quarters is Ownable, StandardToken {
   function adjustTranche(uint256 tranche2) onlyOwner public {
       require(tranche2 > 0);
       tranche = tranche2;
+  }
+
+  /**
+   * Adjust rewards for `_address`
+   */
+  function setPlayerRewards(address _address) internal {
+    require(_address != address(0));
+
+    if (rewards[_address] == 0) {
+      balances[_address] += rewardAmount;
+      rewards[_address] = tranche;
+    } else if (rewards[_address] < tranche) {
+      balances[_address] += balances[_address] / 2;
+      rewards[_address] = tranche;
+    }
   }
 
   /**
@@ -397,6 +423,7 @@ contract Quarters is Ownable, StandardToken {
    * @param _value the amount to send
    */
   function transferAllowance(address _from, address _to, uint256 _value) public returns (bool success) {
+    setPlayerRewards(_from);
     require(_value <= allowed[_from][msg.sender]);     // Check allowance
     allowed[_from][msg.sender] -= _value;
 
