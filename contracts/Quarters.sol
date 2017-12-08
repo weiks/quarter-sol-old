@@ -173,6 +173,7 @@ contract Quarters is Ownable, StandardToken {
   event MegaEarnings(address indexed developer, uint256 value, uint256 _baseRate, uint256 _tranche, uint256 _outstandingQuarters, uint256 _etherPool);
   event Withdraw(address indexed developer, uint256 value, uint256 _baseRate, uint256 _tranche, uint256 _outstandingQuarters, uint256 _etherPool);
   event BaseRateChanged(uint256 _baseRate, uint256 _tranche, uint256 _outstandingQuarters, uint256 _etherPool,  uint256 _totalSupply);
+  event Reward(address indexed _address, uint256 value, uint256 _outstandingQuarters, uint256 _totalSupply);
 
   /**
    * developer modifier
@@ -279,12 +280,20 @@ contract Quarters is Ownable, StandardToken {
   function setPlayerRewards(address _address) internal {
     require(_address != address(0));
 
+    uint256 _reward = 0;
     if (rewards[_address] == 0) {
-      balances[_address] += rewardAmount;
+      _reward = rewardAmount;
       rewards[_address] = tranche;
     } else if (rewards[_address] < tranche) {
-      balances[_address] += balances[_address] / 2;
+      _reward = balances[_address] / 2;
       rewards[_address] = tranche;
+    }
+
+    if (_reward > 0) {
+      balances[_address] += _reward;
+      totalSupply += _reward;
+      outstandingQuarters += _reward;
+      Reward(_address, _reward, outstandingQuarters, totalSupply);
     }
   }
 
