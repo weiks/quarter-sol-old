@@ -264,22 +264,31 @@ contract Quarters is Ownable, StandardToken {
   /**
    * Adjust rewards for `_address`
    */
-  function setPlayerRewards(address _address) internal {
+  function updatePlayerRewards(address _address) internal {
     require(_address != address(0));
 
     uint256 _reward = 0;
     if (rewards[_address] == 0) {
       _reward = rewardAmount;
-      rewards[_address] = tranche;
     } else if (rewards[_address] < tranche) {
       _reward = balances[_address] / 2;
-      rewards[_address] = tranche;
     }
 
     if (_reward > 0) {
+      // update rewards record
+      rewards[_address] = tranche;
+
       balances[_address] += _reward;
+      allowed[_address][msg.sender] += _reward; // set allowance
+      Approval(_address, msg.sender, _reward);
+
       totalSupply += _reward;
       outstandingQuarters += _reward;
+
+      // tranche size change
+      _changeTrancheIfNeeded();
+
+      // reward event
       Reward(_address, _reward, outstandingQuarters, totalSupply);
     }
   }
@@ -373,6 +382,16 @@ contract Quarters is Ownable, StandardToken {
     Approval(buyer, msg.sender, _value);
   }
 
+  function _changeTrancheIfNeeded() internal {
+    if (totalSupply > tranche) {
+      // change tranche size for next cycle
+      tranche = (tranche * trancheNumerator) / trancheDenominator;
+
+      // fire event for tranche change
+      TrancheIncreased(tranche, price, this.balance, outstandingQuarters);
+    }
+  }
+
   // returns number of quarters buyer got
   function _buy(address buyer) internal returns (uint256) {
     require(buyer != address(0));
@@ -387,13 +406,10 @@ contract Quarters is Ownable, StandardToken {
     balances[buyer] += nq;
     outstandingQuarters += nq;
 
-    if (totalSupply > tranche) {
-      // change tranche size for next cycle
-      tranche = (tranche * trancheNumerator) / trancheDenominator;
+    // change tranche size
+    _changeTrancheIfNeeded();
 
-      // fire event for tranche change
-      TrancheIncreased(tranche, price, this.balance, outstandingQuarters);
-    }
+    // transfer owner's cut
     owner.transfer(msg.value / 10);
 
     // event for quarters order (invoice)
@@ -416,7 +432,7 @@ contract Quarters is Ownable, StandardToken {
    * @param _value the amount to send
    */
   function transferAllowance(address _from, address _to, uint256 _value) public returns (bool success) {
-    setPlayerRewards(_from);
+    updatePlayerRewards(_from);
     require(_value <= allowed[_from][msg.sender]);     // Check allowance
     allowed[_from][msg.sender] -= _value;
 
