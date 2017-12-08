@@ -139,10 +139,6 @@ contract Quarters is Ownable, StandardToken {
   uint256 public outstandingQuarters;
 
   // price values for next cycle
-  uint8 public priceNumerator = 2;
-  uint8 public priceDenominator = 3;
-
-  // price values for next cycle
   uint8 public trancheNumerator = 2;
   uint8 public trancheDenominator = 1;
 
@@ -214,22 +210,13 @@ contract Quarters is Ownable, StandardToken {
   /**
    * Adjust reward amount
    */
-   function adjustReward (uint256 reward) onlyOwner public {
-     rewardAmount = reward; // may be zero, no need to check value to 0
-   }
-
-  /**
-   * adjust price for next cycle
-   */
-  function adjustNextPrice (uint8 numerator, uint8 denominator) onlyOwner public {
-    require(numerator > 0 && denominator > 0);
-    priceNumerator = numerator;
-    priceDenominator = denominator;
+  function adjustReward (uint256 reward) onlyOwner public {
+    rewardAmount = reward; // may be zero, no need to check value to 0
   }
 
-  function adjustPrice (uint256 price2) onlyOwner public {
-      require(price2 > 0);
-      price = price2;
+  function adjustPrice (uint256 _price) onlyOwner public {
+    require(_price > 0);
+    price = _price;
   }
 
   function adjustWithdrawRate(uint32 mega2, uint32 megaRate2, uint32 large2, uint32 largeRate2, uint32 medium2, uint32 mediumRate2, uint32 small2, uint32 smallRate2, uint32 microRate2) onlyOwner public {
@@ -270,8 +257,8 @@ contract Quarters is Ownable, StandardToken {
   }
 
   function adjustTranche(uint256 tranche2) onlyOwner public {
-      require(tranche2 > 0);
-      tranche = tranche2;
+    require(tranche2 > 0);
+    tranche = tranche2;
   }
 
   /**
@@ -403,9 +390,6 @@ contract Quarters is Ownable, StandardToken {
     if (totalSupply > tranche) {
       // change tranche size for next cycle
       tranche = (tranche * trancheNumerator) / trancheDenominator;
-
-      // change price for next cycle
-      price = (price * priceNumerator) / priceDenominator;
 
       // fire event for tranche change
       TrancheIncreased(tranche, price, this.balance, outstandingQuarters);
