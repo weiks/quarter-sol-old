@@ -24,3 +24,4 @@ Deploy on Ropsten network:
 ```sh
  $ yarn run truffle deploy --network ropsten
 ```
+Pushes changes should now trigger webhook in Discord
