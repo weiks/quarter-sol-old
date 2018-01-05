@@ -1,123 +1,10 @@
-pragma solidity ^0.4.16;
+pragma solidity ^0.4.18;
+
+import './Ownable.sol';
+import './StandardToken.sol';
 
 interface TokenRecipient {
   function receiveApproval(address _from, uint256 _value, address _token, bytes _extraData) public;
-}
-
-contract Ownable {
-  address public owner;
-
-  // Event
-  event OwnershipChanged(address indexed oldOwner, address indexed newOwner);
-
-  // Modifier
-  modifier onlyOwner {
-    require(msg.sender == owner);
-    _;
-  }
-
-  function Ownable() public {
-    owner = msg.sender;
-  }
-
-  /**
-   * @dev Allows the current owner to transfer control of the contract to a newOwner.
-   * @param newOwner The address to transfer ownership to.
-   */
-  function transferOwnership(address newOwner) onlyOwner public {
-    require(newOwner != address(0));
-    OwnershipChanged(owner, newOwner);
-    owner = newOwner;
-  }
-}
-
-contract ERC20 {
-  uint256 public totalSupply;
-  function balanceOf(address _owner) view public returns (uint256 balance);
-  function transfer(address _to, uint256 _value) public returns (bool success);
-  function transferFrom(address _from, address _to, uint256 _value) public returns (bool success);
-  function approve(address _spender, uint256 _value) public returns (bool success);
-  function allowance(address _owner, address _spender) view public returns (uint256 remaining);
-  event Transfer(address indexed _from, address indexed _to, uint256 _value);
-  event Approval(address indexed _owner, address indexed _spender, uint256 _value);
-}
-
-/*  ERC 20 token */
-contract StandardToken is ERC20 {
-  /**
-   * Internal transfer, only can be called by this contract
-   */
-  function _transfer(address _from, address _to, uint _value) internal returns (bool success) {
-    // Prevent transfer to 0x0 address. Use burn() instead
-    require(_to != address(0));
-    // Check if the sender has enough
-    require(balances[_from] >= _value);
-    // Check for overflows
-    require(balances[_to] + _value > balances[_to]);
-    // Save this for an assertion in the future
-    uint256 previousBalances = balances[_from] + balances[_to];
-    // Subtract from the sender
-    balances[_from] -= _value;
-    // Add the same to the recipient
-    balances[_to] += _value;
-    Transfer(_from, _to, _value);
-    // Asserts are used to use static analysis to find bugs in your code. They should never fail
-    assert(balances[_from] + balances[_to] == previousBalances);
-
-    return true;
-  }
-
-  /**
-   * Transfer tokens
-   *
-   * Send `_value` tokens to `_to` from your account
-   *
-   * @param _to The address of the recipient
-   * @param _value the amount to send
-   */
-  function transfer(address _to, uint256 _value) public returns (bool success) {
-    return _transfer(msg.sender, _to, _value);
-  }
-
-  /**
-   * Transfer tokens from other address
-   *
-   * Send `_value` tokens to `_to` in behalf of `_from`
-   *
-   * @param _from The address of the sender
-   * @param _to The address of the recipient
-   * @param _value the amount to send
-   */
-  function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
-    require(_value <= allowed[_from][msg.sender]);     // Check allowance
-    allowed[_from][msg.sender] -= _value;
-    return _transfer(_from, _to, _value);
-  }
-
-  function balanceOf(address _owner) view public returns (uint256 balance) {
-    return balances[_owner];
-  }
-
-  /**
-   * Set allowance for other address
-   *
-   * Allows `_spender` to spend no more than `_value` tokens in your behalf
-   *
-   * @param _spender The address authorized to spend
-   * @param _value the max amount they can spend
-   */
-  function approve(address _spender, uint256 _value) public returns (bool success) {
-    allowed[msg.sender][_spender] = _value;
-    Approval(msg.sender, _spender, _value);
-    return true;
-  }
-
-  function allowance(address _owner, address _spender) view public returns (uint256 remaining) {
-    return allowed[_owner][_spender];
-  }
-
-  mapping (address => uint256) public balances;
-  mapping (address => mapping (address => uint256)) public allowed;
 }
 
 contract Quarters is Ownable, StandardToken {
@@ -137,6 +24,7 @@ contract Quarters is Ownable, StandardToken {
   mapping (address => bool) public developers;
 
   uint256 public outstandingQuarters;
+  address public q2;
 
   // price values for next cycle
   uint8 public trancheNumerator = 2;
@@ -144,7 +32,7 @@ contract Quarters is Ownable, StandardToken {
 
   // initial multiples, rates (as percentages) for tiers of developers
   uint32 public mega = 20;
-  uint32 public megaRate = 150;
+  uint32 public megaRate = 115;
   uint32 public large = 100;
   uint32 public largeRate = 90;
   uint32 public medium = 2000;
@@ -185,19 +73,13 @@ contract Quarters is Ownable, StandardToken {
    * Initializes contract with initial supply tokens to the owner of the contract
    */
   function Quarters(
-    uint256 initialSupply,
-    string tokenName,
-    string tokenSymbol,
+    address _q2,
     uint256 initialPrice,
     uint256 firstTranche
   ) public {
-    totalSupply = initialSupply;         // Update total supply with the decimal amount
-    balances[msg.sender] = totalSupply; // Give the creator all initial tokens
-
-    name = tokenName;       // Set the name for display purposes
-    symbol = tokenSymbol;   // Set the symbol for display purposes
-    price = initialPrice;   // initial price
-    tranche = firstTranche; // number of Quarters to be sold before increasing price
+    q2 = _q2;
+    price = initialPrice;               // initial price
+    tranche = firstTranche;             // number of Quarters to be sold before increasing price
   }
 
   function setEthRate (uint16 rate) onlyOwner public {
@@ -410,7 +292,7 @@ contract Quarters is Ownable, StandardToken {
     _changeTrancheIfNeeded();
 
     // transfer owner's cut
-    owner.transfer(msg.value / 10);
+    q2.transfer(msg.value / 15);
 
     // event for quarters order (invoice)
     QuartersOrdered(buyer, msg.value, nq);
