@@ -12,6 +12,15 @@ contract Q2 is Ownable, StandardToken {
   uint256 public creationCap = 15000000 * (10**18); // 15M
   uint256 public reservedFund = 10000000 * (10**18); // 10M
 
+  // stage info
+  struct Stage {
+    uint8 number;
+    uint256 exchangeRate;
+    uint256 startBlock;
+    uint256 endBlock;
+    uint256 cap;
+  }
+
   // events
   event MintTokens(address indexed _to, uint256 _value);
   event StageStarted(uint8 _stage, uint256 _totalSupply, uint256 _balance);
@@ -19,13 +28,11 @@ contract Q2 is Ownable, StandardToken {
 
   // eth wallet
   address public ethWallet;
+  mapping (uint8 => Stage) stages;
 
   // current state info
   bool public running;
-  uint8 public stage;
-  uint256 public exchangeRate;
-  uint256 public startBlock;
-  uint256 public endBlock;
+  uint8 public currentStage;
 
   function Q2(address _ethWallet) public {
     ethWallet = _ethWallet;
@@ -52,34 +59,46 @@ contract Q2 is Ownable, StandardToken {
   function buyTokens() public payable {
     require(running);
     require(msg.value > 0);
-    require(block.number >= startBlock && block.number < endBlock);
 
-    uint256 tokens = msg.value * exchangeRate;
+    Stage memory stage = stages[currentStage];
+    require(block.number >= stage.startBlock && block.number <= stage.endBlock);
+
+    uint256 tokens = msg.value * stage.exchangeRate;
+    require(totalSupply + tokens <= stage.cap);
+
     mintTokens(msg.sender, tokens);
   }
 
-  function startStage(uint256 _exchangeRate, uint256 _startBlock, uint256 _endBlock) public onlyOwner {
+  function startStage(uint256 _exchangeRate, uint256 _cap, uint256 _startBlock, uint256 _endBlock) public onlyOwner {
     require(!running);
     require(_exchangeRate > 0);
     require(_startBlock > block.number);
     require(_startBlock < _endBlock);
 
-    startBlock = _startBlock;
-    endBlock = _endBlock;
-    exchangeRate = _exchangeRate;
-    stage += 1;
     running = true;
+    currentStage += 1;
 
-    StageStarted(stage, totalSupply, this.balance);
+    // create new stage object
+    Stage memory s = Stage({
+      number: currentStage,
+      startBlock: _startBlock,
+      endBlock: _endBlock,
+      exchangeRate: _exchangeRate,
+      cap: _cap
+    });
+    stages[currentStage] = s;
+
+    StageStarted(currentStage, totalSupply, this.balance);
   }
 
   function endStage() public onlyOwner {
     require(running);
-    require(block.number > endBlock);
 
     running = false;
+    Stage memory stage = stages[currentStage];
+    require(block.number > stage.endBlock);
 
-    StageEnded(stage, totalSupply, this.balance);
+    StageEnded(currentStage, totalSupply, this.balance);
   }
 
   function withdraw() public onlyOwner {
