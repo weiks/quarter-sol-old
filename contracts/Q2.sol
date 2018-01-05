@@ -25,6 +25,7 @@ contract Q2 is Ownable, StandardToken {
   event MintTokens(address indexed _to, uint256 _value);
   event StageStarted(uint8 _stage, uint256 _totalSupply, uint256 _balance);
   event StageEnded(uint8 _stage, uint256 _totalSupply, uint256 _balance);
+  event StageWithdraw(uint8 _stage, uint256 _balance);
 
   // eth wallet
   address public ethWallet;
@@ -99,6 +100,10 @@ contract Q2 is Ownable, StandardToken {
     require(block.number > stage.endBlock);
 
     StageEnded(currentStage, totalSupply, this.balance);
+
+    // transfer raised money
+    ethWallet.transfer(this.balance);
+    StageWithdraw(currentStage, this.balance);
   }
 
   function withdraw() public onlyOwner {
