@@ -1,9 +1,9 @@
 pragma solidity ^0.4.18;
 
 import './Ownable.sol';
-import './StandardToken.sol';
+import './DividendToken.sol';
 
-contract Q2 is Ownable, StandardToken {
+contract Q2 is Ownable, DividendToken {
   string public name = "Q2";
   string public symbol = "Q2";
   uint8 public decimals = 18;
