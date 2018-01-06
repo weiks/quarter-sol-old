@@ -2,6 +2,7 @@ pragma solidity ^0.4.18;
 
 import './Ownable.sol';
 import './StandardToken.sol';
+import './Q2.sol';
 
 interface TokenRecipient {
   function receiveApproval(address _from, uint256 _value, address _token, bytes _extraData) public;
@@ -292,7 +293,7 @@ contract Quarters is Ownable, StandardToken {
     _changeTrancheIfNeeded();
 
     // transfer owner's cut
-    q2.transfer(msg.value / 15);
+    Q2(q2).disburse.value(msg.value / 15)();
 
     // event for quarters order (invoice)
     QuartersOrdered(buyer, msg.value, nq);
