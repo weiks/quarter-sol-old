@@ -15,7 +15,7 @@ contract Quarters is Ownable, StandardToken {
   uint8 public decimals = 0; // no decimals, only integer quarters
 
   // ETH/USD rate
-  uint16 public ethRate = 300;
+  uint16 public ethRate = 1000;
 
   uint256 public price;
   uint256 public tranche = 1000000; // Number of Quarters in initial tranche
