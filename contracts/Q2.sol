@@ -25,7 +25,6 @@ contract Q2 is Ownable, DividendToken {
   event MintTokens(address indexed _to, uint256 _value);
   event StageStarted(uint8 _stage, uint256 _totalSupply, uint256 _balance);
   event StageEnded(uint8 _stage, uint256 _totalSupply, uint256 _balance);
-  event StageWithdraw(uint8 _stage, uint256 _balance);
 
   // eth wallet
   address public ethWallet;
@@ -76,6 +75,10 @@ contract Q2 is Ownable, DividendToken {
     require(_startBlock > block.number);
     require(_startBlock < _endBlock);
 
+    // check if any stage is running
+    Stage memory currentObj = stages[currentStage];
+    require(block.number > currentObj.endBlock);
+
     running = true;
     currentStage += 1;
 
@@ -90,20 +93,6 @@ contract Q2 is Ownable, DividendToken {
     stages[currentStage] = s;
 
     StageStarted(currentStage, totalSupply, this.balance);
-  }
-
-  function endStage() public onlyOwner {
-    require(running);
-
-    running = false;
-    Stage memory stage = stages[currentStage];
-    require(block.number > stage.endBlock);
-
-    StageEnded(currentStage, totalSupply, this.balance);
-
-    // transfer raised money
-    ethWallet.transfer(this.balance);
-    StageWithdraw(currentStage, this.balance);
   }
 
   function withdraw() public onlyOwner {
