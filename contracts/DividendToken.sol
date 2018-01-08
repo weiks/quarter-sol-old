@@ -21,7 +21,7 @@ contract DividendToken is StandardToken {
     return (balances[account] * newDividend) / totalSupply;
   }
 
-  function updateAccount(address account) public {
+  function updateAccount(address account) internal {
     uint256 owing = dividendsOwing(account);
     accounts[account].lastDividendPoint = totalDividend;
     if (owing > 0) {
@@ -73,9 +73,5 @@ contract DividendToken is StandardToken {
     require(accounts[msg.sender].balance > 0);
     msg.sender.transfer(accounts[msg.sender].balance);
     accounts[msg.sender].balance = 0;
-  }
-
-  function getDividendBalance() view public returns (uint256) {
-    return accounts[msg.sender].balance;
   }
 }
