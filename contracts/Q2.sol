@@ -72,7 +72,7 @@ contract Q2 is Ownable, DividendToken {
 
   function startStage(uint256 _exchangeRate, uint256 _cap, uint256 _startBlock, uint256 _endBlock) public onlyOwner {
     require(!running);
-    require(_exchangeRate > 0 && _cap > totalSupply);
+    require(_exchangeRate > 0 && _cap > 0);
     require(_startBlock > block.number);
     require(_startBlock < _endBlock);
 
@@ -85,7 +85,7 @@ contract Q2 is Ownable, DividendToken {
       startBlock: _startBlock,
       endBlock: _endBlock,
       exchangeRate: _exchangeRate,
-      cap: _cap
+      cap: _cap + totalSupply
     });
     stages[currentStage] = s;
 
