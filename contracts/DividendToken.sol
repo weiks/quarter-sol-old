@@ -74,4 +74,8 @@ contract DividendToken is StandardToken {
     msg.sender.transfer(accounts[msg.sender].balance);
     accounts[msg.sender].balance = 0;
   }
+
+  function getDividendBalance() view public returns (uint256) {
+    return accounts[msg.sender].balance;
+  }
 }
