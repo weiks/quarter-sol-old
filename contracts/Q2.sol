@@ -94,4 +94,13 @@ contract Q2 is Ownable, DividendToken {
   function withdraw() public onlyOwner {
     ethWallet.transfer(this.balance);
   }
+
+  function getCurrentStage() view public returns (uint8 number, uint256 exchangeRate, uint256 startBlock, uint256 endBlock, uint256 cap) {
+    Stage memory currentObj = stages[currentStage];
+    number = currentObj.number;
+    exchangeRate = currentObj.exchangeRate;
+    startBlock = currentObj.startBlock;
+    endBlock = currentObj.endBlock;
+    cap = currentObj.cap;
+  }
 }

@@ -16,7 +16,7 @@ contract DividendToken is StandardToken {
   uint256 public totalDividend;
   uint256 public unclaimedDividend;
 
-  function dividendsOwing(address account) internal view returns (uint256) {
+  function dividendsOwing(address account) public view returns (uint256) {
     uint256 newDividend = totalDividend - accounts[account].lastDividendPoint;
     return (balances[account] * newDividend) / totalSupply;
   }
