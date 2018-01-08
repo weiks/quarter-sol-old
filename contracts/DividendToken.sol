@@ -67,4 +67,11 @@ contract DividendToken is StandardToken {
     updateAccount(_from);
     return super.transferFrom(_from, _to, _value);
   }
+
+  function withdrawDividend() public {
+    updateAccount(msg.sender);
+    require(accounts[msg.sender].balance > 0);
+    msg.sender.transfer(accounts[msg.sender].balance);
+    accounts[msg.sender].balance = 0;
+  }
 }
