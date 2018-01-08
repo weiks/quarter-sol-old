@@ -31,7 +31,6 @@ contract Q2 is Ownable, DividendToken {
   mapping (uint8 => Stage) stages;
 
   // current state info
-  bool public running;
   uint8 public currentStage;
 
   function Q2(address _ethWallet) public {
@@ -57,7 +56,6 @@ contract Q2 is Ownable, DividendToken {
   }
 
   function buyTokens() public payable {
-    require(running);
     require(msg.value > 0);
 
     Stage memory stage = stages[currentStage];
@@ -70,7 +68,6 @@ contract Q2 is Ownable, DividendToken {
   }
 
   function startStage(uint256 _exchangeRate, uint256 _cap, uint256 _startBlock, uint256 _endBlock) public onlyOwner {
-    require(!running);
     require(_exchangeRate > 0 && _cap > 0);
     require(_startBlock > block.number);
     require(_startBlock < _endBlock);
@@ -79,7 +76,6 @@ contract Q2 is Ownable, DividendToken {
     Stage memory currentObj = stages[currentStage];
     require(block.number > currentObj.endBlock);
 
-    running = true;
     currentStage += 1;
 
     // create new stage object
