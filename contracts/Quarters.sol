@@ -15,10 +15,10 @@ contract Quarters is Ownable, StandardToken {
   uint8 public decimals = 0; // no decimals, only integer quarters
 
   // ETH/USD rate
-  uint16 public ethRate = 1000;
+  uint16 public ethRate = 4000;  // approximately 4 Quarters per dollar
 
   uint256 public price;
-  uint256 public tranche = 1000000; // Number of Quarters in initial tranche
+  uint256 public tranche = 40000; // Number of Quarters in initial tranche
 
   // List of developers
   // address -> status
@@ -44,7 +44,7 @@ contract Quarters is Ownable, StandardToken {
 
   // rewards related storage
   mapping (address => uint256) public rewards;
-  uint256 public rewardAmount = 2000;
+  uint256 public rewardAmount = 40;
 
   // ETH rate changed
   event EthRateChanged(uint16 currentRate, uint16 newRate);
