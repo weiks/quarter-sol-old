@@ -14,7 +14,7 @@ contract Quarters is Ownable, StandardToken {
   string public symbol = "Q";
   uint8 public decimals = 0; // no decimals, only integer quarters
 
-  // ETH/USD rate
+  // ETH/Quarter exchange rate
   uint16 public ethRate = 4000;  // approximately 4 Quarters per dollar
 
   uint256 public price;
@@ -50,6 +50,9 @@ contract Quarters is Ownable, StandardToken {
   
   uint8 public rewardNumerator = 1;
   uint8 public rewardDenominator = 4;
+  
+  // reserve ETH from Q2 to fund rewards
+  uint256 public reserveETH=0;
 
   // ETH rate changed
   event EthRateChanged(uint16 currentRate, uint16 newRate);
@@ -172,6 +175,11 @@ contract Quarters is Ownable, StandardToken {
 
       totalSupply += _reward;
       outstandingQuarters += _reward;
+
+      reserveETH -= (reward * (10 ** 18)) / ethRate;  // boost developer earnings funded by Q2
+      if (reserveETH < 0 ) {
+        reserveETH =0;
+      }
 
       // tranche size change
       _changeTrancheIfNeeded();
@@ -367,13 +375,17 @@ contract Quarters is Ownable, StandardToken {
     // log rate change
     BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, this.balance, totalSupply);
   }
+  
+  function disburse() public payable {
+    reserveETH += msg.value;
+  }  
 
   function getBaseRate () view public returns (uint256) {
     if (outstandingQuarters > 0) {
-      return this.balance / outstandingQuarters;
+      return (this.balance - reserveETH) / outstandingQuarters;
     }
 
-    return this.balance;
+    return (this.balance - reserveETH);
   }
 
   function getRate (uint256 value) view public returns (uint32) {
