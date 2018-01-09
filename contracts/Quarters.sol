@@ -27,7 +27,7 @@ contract Quarters is Ownable, StandardToken {
   uint256 public outstandingQuarters;
   address public q2;
 
-  // price values for next cycle
+  // number of Quarters for next tranche
   uint8 public trancheNumerator = 2;
   uint8 public trancheDenominator = 1;
 
@@ -43,8 +43,13 @@ contract Quarters is Ownable, StandardToken {
   uint32 public microRate = 25;
 
   // rewards related storage
-  mapping (address => uint256) public rewards;
+  mapping (address => uint256) public rewards;    // rewards earned, but not yet collected
+  mapping (address => uint256) public trueBuy;    // tranche rewards are set based on *actual* purchases of Quarters
+
   uint256 public rewardAmount = 40;
+  
+  uint8 public rewardNumerator = 1;
+  uint8 public rewardDenominator = 4;
 
   // ETH rate changed
   event EthRateChanged(uint16 currentRate, uint16 newRate);
@@ -69,7 +74,7 @@ contract Quarters is Ownable, StandardToken {
   }
 
   /**
-   * Constrctor function
+   * Constructor function
    *
    * Initializes contract with initial supply tokens to the owner of the contract
    */
@@ -154,7 +159,7 @@ contract Quarters is Ownable, StandardToken {
     if (rewards[_address] == 0) {
       _reward = rewardAmount;
     } else if (rewards[_address] < tranche) {
-      _reward = balances[_address] / 2;
+      _reward = trueBuy[_address] * rewardNumerator / rewardDenominator;
     }
 
     if (_reward > 0) {
@@ -287,6 +292,7 @@ contract Quarters is Ownable, StandardToken {
 
     totalSupply += nq;
     balances[buyer] += nq;
+    trueBuy[buyer] += nq;
     outstandingQuarters += nq;
 
     // change tranche size
