@@ -176,7 +176,7 @@ contract Quarters is Ownable, StandardToken {
       totalSupply += _reward;
       outstandingQuarters += _reward;
 
-      uint256 spentETH = (reward * (10 ** 18)) / ethRate;
+      uint256 spentETH = (_reward * (10 ** 18)) / ethRate;
       if (reserveETH >= spentETH) {
           reserveETH -= spentETH;
         } else {
