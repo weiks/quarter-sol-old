@@ -176,7 +176,7 @@ contract Quarters is Ownable, StandardToken {
       totalSupply += _reward;
       outstandingQuarters += _reward;
 
-      reserveETH -= (reward * (10 ** 18)) / ethRate;  // boost developer earnings funded by Q2
+      reserveETH -= (_reward * (10 ** 18)) / ethRate;  // boost developer earnings funded by Q2
       if (reserveETH < 0 ) {
         reserveETH =0;
       }
