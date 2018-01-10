@@ -2,7 +2,7 @@ var Quarters = artifacts.require('./Quarters.sol')
 var Q2 = artifacts.require('./Q2.sol')
 
 module.exports = function(deployer) {
-  deployer.deploy(Quarters, '0', 'Quarters', 'QRT', '100', '100000')
+  deployer.deploy(Quarters, '4000', '100000')
   deployer.deploy(Q2, web3.eth.accounts[0]).then(async () => {
     const q2 = await Q2.deployed()
     await q2.startStage(

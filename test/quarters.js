@@ -1,11 +1,12 @@
 import assertThrows from "./helpers/assertThrows";
+import assertRevert from "./helpers/assertRevert";
 
 let Quarters = artifacts.require("./Quarters.sol");
+let Q2 = artifacts.require("./Q2.sol")
 
 const BigNumber = web3.BigNumber;
 
 contract("Quarters", function(accounts) {
-  const initialSupply = 100; // initialSupply = 100 quarters
   const initialPrice = 1000; // initial price of quarter (300k quarters for 1 ETH at USD 300)
   const firstTranche = 900000; // first tranche value -> 900k quarters
 
@@ -15,18 +16,16 @@ contract("Quarters", function(accounts) {
 
     // runs before test cases
     before(async function() {
+      const q2 = await Q2.new(accounts[0])
+
       contract = await Quarters.new(
-        initialSupply,
-        "Quarters",
-        "Q1",
+        q2.address,
         initialPrice,
         firstTranche,
         { from: accounts[0] } // `from` key is important to change transaction creator
       );
       contract1 = await Quarters.new(
-        initialSupply,
-        "Quarters",
-        "Q2",
+        q2.address,
         initialPrice,
         firstTranche,
         { from: accounts[1] }
@@ -43,30 +42,18 @@ contract("Quarters", function(accounts) {
     });
 
     it("should create quarter contract with proper values", async function() {
-      let [totalSupply, name, symbol, price, tranche] = await Promise.all([
-        contract.totalSupply(),
-        contract.name(),
-        contract.symbol(),
+      let [price, tranche] = await Promise.all([
         contract.price(),
         contract.tranche()
       ]);
-      assert.equal(totalSupply.eq(initialSupply), true);
-      assert.equal(name, "Quarters");
-      assert.equal(symbol, "Q1");
       assert.equal(price.eq(initialPrice), true);
       assert.equal(tranche.eq(firstTranche), true);
 
       // check for second contract
-      [totalSupply, name, symbol, price, tranche] = await Promise.all([
-        contract1.totalSupply(),
-        contract1.name(),
-        contract1.symbol(),
+      [price, tranche] = await Promise.all([
         contract1.price(),
         contract1.tranche()
       ]);
-      assert.equal(totalSupply.eq(initialSupply), true);
-      assert.equal(name, "Quarters");
-      assert.equal(symbol, "Q2");
       assert.equal(price.eq(initialPrice), true);
       assert.equal(tranche.eq(firstTranche), true);
     });
@@ -77,10 +64,9 @@ contract("Quarters", function(accounts) {
 
     // runs before test cases
     before(async function() {
+      const q2 = await Q2.new(accounts[0])
       contract = await Quarters.new(
-        initialSupply,
-        "Quarters",
-        "Q",
+        q2.address,
         initialPrice,
         firstTranche,
         { from: accounts[0] } // `from` key is important to change transaction creator
@@ -88,8 +74,9 @@ contract("Quarters", function(accounts) {
     });
 
     it("should not allow others to change eth price", async function() {
-      assertThrows(contract.setEthRate(350, { from: accounts[1] }));
-      assertThrows(contract.setEthRate(400, { from: accounts[2] }));
+      console.log("Fd")
+      assertRevert(contract.setEthRate(350, { from: accounts[1] }));
+      assertRevert(contract.setEthRate(400, { from: accounts[2] }));
     });
 
     it("should allow only owner to change eth price", async function() {
@@ -118,8 +105,8 @@ contract("Quarters", function(accounts) {
     });
 
     it("should allow not allow anyone to set eth price to 0", async function() {
-      assertThrows(contract.setEthRate(0, { from: accounts[0] })); // try with owner
-      assertThrows(contract.setEthRate(0, { from: accounts[1] }));
+      assertRevert(contract.setEthRate(0, { from: accounts[0] })); // try with owner
+      assertRevert(contract.setEthRate(0, { from: accounts[1] }));
     });
   });
 
@@ -128,10 +115,9 @@ contract("Quarters", function(accounts) {
 
     // runs before test cases
     before(async function() {
+      const q2 = await Q2.new(accounts[0])
       contract = await Quarters.new(
-        initialSupply,
-        "Quarters",
-        "Q",
+        q2.address,
         initialPrice,
         firstTranche,
         { from: accounts[0] } // `from` key is important to change transaction creator
@@ -143,7 +129,7 @@ contract("Quarters", function(accounts) {
       assert.equal(owner, accounts[0]);
 
       // check if eth price can not be set by accounts[1]
-      assertThrows(contract.setEthRate(350, { from: accounts[1] }));
+      assertRevert(contract.setEthRate(350, { from: accounts[1] }));
 
       // change transfer ownership
       let receipt = await contract.transferOwnership(accounts[1]);
@@ -156,7 +142,7 @@ contract("Quarters", function(accounts) {
       assert.equal(owner, accounts[1]);
 
       // check if eth price can not be set by accounts[0]
-      assertThrows(contract.setEthRate(350, { from: accounts[0] }));
+      assertRevert(contract.setEthRate(350, { from: accounts[0] }));
 
       // check rate if it's not changed
       let newRate = await contract.ethRate();
@@ -173,7 +159,7 @@ contract("Quarters", function(accounts) {
       assert.equal(owner, accounts[1]);
 
       // try to change transfer ownership
-      assertThrows(
+      assertRevert(
         contract.transferOwnership(accounts[2], { from: accounts[3] })
       );
 
@@ -181,7 +167,7 @@ contract("Quarters", function(accounts) {
       assert.equal(owner, accounts[1]);
 
       // try to change transfer ownership
-      assertThrows(
+      assertRevert(
         contract.transferOwnership(accounts[2], { from: accounts[2] })
       );
 
@@ -195,10 +181,9 @@ contract("Quarters", function(accounts) {
 
     // runs before test cases
     before(async function() {
+      const q2 = await Q2.new(accounts[0])
       contract = await Quarters.new(
-        initialSupply,
-        "Quarters",
-        "Q",
+        q2.address,
         initialPrice,
         firstTranche,
         { from: accounts[0] } // `from` key is important to change transaction creator
@@ -206,10 +191,10 @@ contract("Quarters", function(accounts) {
     });
 
     it("should not allow others to change eth price", async function() {
-      assertThrows(
+      assertRevert(
         contract.setDeveloperStatus(accounts[6], true, { from: accounts[1] })
       );
-      assertThrows(
+      assertRevert(
         contract.setDeveloperStatus(accounts[7], true, { from: accounts[2] })
       );
     });
@@ -257,10 +242,9 @@ contract("Quarters", function(accounts) {
 
     // runs before test cases
     before(async function() {
+      const q2 = await Q2.new(accounts[0])
       contract = await Quarters.new(
-        initialSupply,
-        "Quarters",
-        "Q",
+        q2.address,
         initialPrice,
         firstTranche,
         { from: accounts[0] } // `from` key is important to change transaction creator
@@ -464,10 +448,9 @@ contract("Quarters", function(accounts) {
 
     // runs before test cases
     before(async function() {
+      const q2 = await Q2.new(accounts[0])
       contract = await Quarters.new(
-        initialSupply,
-        "Quarters",
-        "Q",
+        q2.address,
         initialPrice,
         firstTranche,
         { from: accounts[0] } // `from` key is important to change transaction creator
@@ -483,8 +466,8 @@ contract("Quarters", function(accounts) {
     });
 
     it("should not allow non-developer to withdraw", async function() {
-      assertThrows(contract.withdraw(web3.toWei(100), { from: accounts[6] })); // 100 tokens
-      assertThrows(contract.withdraw(web3.toWei(500), { from: accounts[7] })); // 500 tokens
+      assertRevert(contract.withdraw(web3.toWei(100), { from: accounts[6] })); // 100 tokens
+      assertRevert(contract.withdraw(web3.toWei(500), { from: accounts[7] })); // 500 tokens
     });
 
     it("should not allow developer to withdraw with no balance", async function() {
@@ -493,7 +476,7 @@ contract("Quarters", function(accounts) {
         from: accounts[0]
       });
 
-      assertThrows(contract.withdraw(web3.toWei(100), { from: accounts[6] })); // 100 tokens
+      assertRevert(contract.withdraw(web3.toWei(100), { from: accounts[6] })); // 100 tokens
     });
 
     it("should have proper buying rate for types of devleopers", async function() {});
