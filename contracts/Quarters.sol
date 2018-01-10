@@ -14,10 +14,7 @@ contract Quarters is Ownable, StandardToken {
   string public symbol = "Q";
   uint8 public decimals = 0; // no decimals, only integer quarters
 
-  uint16 public ethRate = 1000; // USD/ETH
-
-  // ETH/Quarter exchange rate
-  uint256 public price = 4000; // approximately 4 Quarters per dollar
+  uint16 public ethRate = 4000; // Quarters/ETH
   uint256 public tranche = 40000; // Number of Quarters in initial tranche
 
   // List of developers
@@ -62,7 +59,7 @@ contract Quarters is Ownable, StandardToken {
 
   event QuartersOrdered(address indexed sender, uint256 ethValue, uint256 tokens);
   event DeveloperStatusChanged(address indexed developer, bool status);
-  event TrancheIncreased(uint256 _tranche, uint256 _price, uint256 _etherPool, uint256 _outstandingQuarters);
+  event TrancheIncreased(uint256 _tranche, uint256 _etherPool, uint256 _outstandingQuarters);
   event MegaEarnings(address indexed developer, uint256 value, uint256 _baseRate, uint256 _tranche, uint256 _outstandingQuarters, uint256 _etherPool);
   event Withdraw(address indexed developer, uint256 value, uint256 _baseRate, uint256 _tranche, uint256 _outstandingQuarters, uint256 _etherPool);
   event BaseRateChanged(uint256 _baseRate, uint256 _tranche, uint256 _outstandingQuarters, uint256 _etherPool,  uint256 _totalSupply);
@@ -83,11 +80,9 @@ contract Quarters is Ownable, StandardToken {
    */
   function Quarters(
     address _q2,
-    uint256 initialPrice,
     uint256 firstTranche
   ) public {
     q2 = _q2;
-    price = initialPrice;               // initial price
     tranche = firstTranche;             // number of Quarters to be sold before increasing price
   }
 
@@ -103,11 +98,6 @@ contract Quarters is Ownable, StandardToken {
    */
   function adjustReward (uint256 reward) onlyOwner public {
     rewardAmount = reward; // may be zero, no need to check value to 0
-  }
-
-  function adjustPrice (uint256 _price) onlyOwner public {
-    require(_price > 0);
-    price = _price;
   }
 
   function adjustWithdrawRate(uint32 mega2, uint32 megaRate2, uint32 large2, uint32 largeRate2, uint32 medium2, uint32 mediumRate2, uint32 small2, uint32 smallRate2, uint32 microRate2) onlyOwner public {
@@ -286,7 +276,7 @@ contract Quarters is Ownable, StandardToken {
       tranche = (tranche * trancheNumerator) / trancheDenominator;
 
       // fire event for tranche change
-      TrancheIncreased(tranche, price, this.balance, outstandingQuarters);
+      TrancheIncreased(tranche, this.balance, outstandingQuarters);
     }
   }
 
@@ -294,7 +284,7 @@ contract Quarters is Ownable, StandardToken {
   function _buy(address buyer) internal returns (uint256) {
     require(buyer != address(0));
 
-    uint256 nq = (msg.value * ethRate * price) / (10 ** 18);
+    uint256 nq = (msg.value * ethRate) / (10 ** 18);
     require(nq != 0);
     if (nq > tranche) {
       nq = tranche;
