@@ -14,10 +14,10 @@ contract Quarters is Ownable, StandardToken {
   string public symbol = "Q";
   uint8 public decimals = 0; // no decimals, only integer quarters
 
-  // ETH/Quarter exchange rate
-  uint16 public ethRate = 4000;  // approximately 4 Quarters per dollar
+  uint16 public ethRate = 1000; // USD/ETH
 
-  uint256 public price;
+  // ETH/Quarter exchange rate
+  uint256 public price = 4000; // approximately 4 Quarters per dollar
   uint256 public tranche = 40000; // Number of Quarters in initial tranche
 
   // List of developers
@@ -47,10 +47,10 @@ contract Quarters is Ownable, StandardToken {
   mapping (address => uint256) public trueBuy;    // tranche rewards are set based on *actual* purchases of Quarters
 
   uint256 public rewardAmount = 40;
-  
+
   uint8 public rewardNumerator = 1;
   uint8 public rewardDenominator = 4;
-  
+
   // reserve ETH from Q2 to fund rewards
   uint256 public reserveETH=0;
 
@@ -281,7 +281,7 @@ contract Quarters is Ownable, StandardToken {
   }
 
   function _changeTrancheIfNeeded() internal {
-    if (totalSupply > tranche) {
+    if (totalSupply >= tranche) {
       // change tranche size for next cycle
       tranche = (tranche * trancheNumerator) / trancheDenominator;
 
@@ -309,7 +309,7 @@ contract Quarters is Ownable, StandardToken {
     _changeTrancheIfNeeded();
 
     // transfer owner's cut
-    Q2(q2).disburse.value(msg.value / 15)();
+    Q2(q2).disburse.value(msg.value * 15 / 100)();
 
     // event for quarters order (invoice)
     QuartersOrdered(buyer, msg.value, nq);
@@ -377,10 +377,10 @@ contract Quarters is Ownable, StandardToken {
     // log rate change
     BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, this.balance, totalSupply);
   }
-  
+
   function disburse() public payable {
     reserveETH += msg.value;
-  }  
+  }
 
   function getBaseRate () view public returns (uint256) {
     if (outstandingQuarters > 0) {
