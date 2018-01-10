@@ -4,12 +4,13 @@
   "main": "truffle.js",
   "private": "true",
   "scripts": {
+    "testrpc": "yarn run ganache-cli --gaslimit 150000000",
     "test": "yarn run truffle test"
   },
   "dependencies": {
-    "ethereumjs-testrpc": "^4.1.3",
-    "ethereumjs-util": "^5.1.2",
-    "truffle": "^4.0.1"
+    "ethereumjs-util": "^5.1.3",
+    "ganache-cli": "^6.0.3",
+    "truffle": "^4.0.4"
   },
   "devDependencies": {
     "babel-polyfill": "^6.26.0",
