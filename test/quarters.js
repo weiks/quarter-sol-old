@@ -6,10 +6,10 @@ let Q2 = artifacts.require("./Q2.sol")
 
 const BigNumber = web3.BigNumber;
 
-contract("Quarters", function(accounts) {
-  const initialPrice = 4000;
-  const firstTranche = 40000;
+const ethRate = 4000;
+const firstTranche = 40000;
 
+contract("Quarters", function(accounts) {
   describe("initialization", async function() {
     let contract; // contract with account 0
     let contract1; // contract with account 1
@@ -20,13 +20,11 @@ contract("Quarters", function(accounts) {
 
       contract = await Quarters.new(
         q2.address,
-        initialPrice,
         firstTranche,
         { from: accounts[0] } // `from` key is important to change transaction creator
       );
       contract1 = await Quarters.new(
         q2.address,
-        initialPrice,
         firstTranche,
         { from: accounts[1] }
       );
@@ -42,19 +40,15 @@ contract("Quarters", function(accounts) {
     });
 
     it("should create quarter contract with proper values", async function() {
-      let [price, tranche] = await Promise.all([
-        contract.price(),
+      let [tranche] = await Promise.all([
         contract.tranche()
       ]);
-      assert.equal(price.eq(initialPrice), true);
       assert.equal(tranche.eq(firstTranche), true);
 
       // check for second contract
-      [price, tranche] = await Promise.all([
-        contract1.price(),
+      [tranche] = await Promise.all([
         contract1.tranche()
       ]);
-      assert.equal(price.eq(initialPrice), true);
       assert.equal(tranche.eq(firstTranche), true);
     });
   });
@@ -67,7 +61,6 @@ contract("Quarters", function(accounts) {
       const q2 = await Q2.new(accounts[0])
       contract = await Quarters.new(
         q2.address,
-        initialPrice,
         firstTranche,
         { from: accounts[0] } // `from` key is important to change transaction creator
       );
@@ -117,7 +110,6 @@ contract("Quarters", function(accounts) {
       const q2 = await Q2.new(accounts[0])
       contract = await Quarters.new(
         q2.address,
-        initialPrice,
         firstTranche,
         { from: accounts[0] } // `from` key is important to change transaction creator
       );
@@ -183,7 +175,6 @@ contract("Quarters", function(accounts) {
       const q2 = await Q2.new(accounts[0])
       contract = await Quarters.new(
         q2.address,
-        initialPrice,
         firstTranche,
         { from: accounts[0] } // `from` key is important to change transaction creator
       );
@@ -237,7 +228,6 @@ contract("Quarters", function(accounts) {
   //
   describe("buy", async function() {
     let contract; // contract with account 0
-    let ethRate = 1000;
     let q2 = null
 
     // runs before test cases
@@ -245,7 +235,6 @@ contract("Quarters", function(accounts) {
       q2 = await Q2.new(accounts[0])
       contract = await Quarters.new(
         q2.address,
-        initialPrice,
         firstTranche,
         { from: accounts[0] } // `from` key is important to change transaction creator
       );
@@ -259,9 +248,9 @@ contract("Quarters", function(accounts) {
       it("should get equivalent tokens for ethers", async function() {
         // fetch current owner's balance
         let currentOwnerBalance = await web3.eth.getBalance(q2.address);
-        let etherValue = web3.toWei(0.01);
+        let etherValue = web3.toWei(1);
         let expectedQuarters = web3.fromWei(
-          new BigNumber(etherValue).mul(ethRate).mul(initialPrice)
+          new BigNumber(etherValue).mul(ethRate)
         );
         let expectedOwnerEarnings = new BigNumber(etherValue).mul(15).div(100);
 
@@ -289,17 +278,15 @@ contract("Quarters", function(accounts) {
         );
       });
 
-      it("should set proper totalSupply, price, tranche", async function() {
+      it("should set proper totalSupply, tranche", async function() {
         let senderBalance = await contract.balanceOf(accounts[2]);
         let newTotalSupply = new BigNumber(0).plus(senderBalance);
 
-        let [totalSupply, price, tranche] = await Promise.all([
+        let [totalSupply, tranche] = await Promise.all([
           contract.totalSupply(),
-          contract.price(),
           contract.tranche()
         ]);
         assert.equal(totalSupply.eq(newTotalSupply), true);
-        assert.equal(price.eq(initialPrice), true);
         assert.equal(tranche.eq(firstTranche), true);
       });
     });
@@ -311,19 +298,16 @@ contract("Quarters", function(accounts) {
         let currentOwnerBalance = await web3.eth.getBalance(q2.address);
         let [
           currentTotalSupply,
-          currentPrice,
           currentTranche
         ] = await Promise.all([
           contract.totalSupply(),
-          contract.price(),
           contract.tranche()
         ]);
 
-        let etherValue = web3.toWei(1); // 10 ether -> should get 40k tokens
+        let etherValue = web3.toWei(10); // 10 ether -> should get 40k tokens
         let expectedQuarters = web3.fromWei(
-          new BigNumber(etherValue).mul(ethRate).mul(initialPrice)
+          new BigNumber(etherValue).mul(ethRate)
         );
-        console.log(expectedQuarters.toString())
         let expectedOwnerEarnings = new BigNumber(etherValue).mul(15).div(100);
 
         let receipt = await contract.buy({
@@ -331,43 +315,39 @@ contract("Quarters", function(accounts) {
           value: etherValue
         }); // buy method
 
-        // assert.equal(receipt.logs.length, 3);
+        assert.equal(receipt.logs.length, 3);
         let log = receipt.logs[0];
         assert.equal(log.event, "TrancheIncreased");
 
         let expectedTrache = new BigNumber(currentTranche).mul(2);
         assert.equal(log.args._tranche.eq(expectedTrache), true);
-        assert.equal(log.args._price.toNumber(), 4000, true);
 
         log = receipt.logs[1];
         assert.equal(log.event, "QuartersOrdered");
         assert.equal(log.args.sender, accounts[3]);
         assert.equal(log.args.ethValue.eq(etherValue), true);
-        console.log(log.args.tokens.toString(), expectedQuarters.toString());
         assert.equal(log.args.tokens.eq(expectedQuarters), true);
 
         // check quarter balance of sender
         let senderBalance = await contract.balanceOf(accounts[3]);
         assert.equal(expectedQuarters.eq(senderBalance), true);
 
-        check balance of sender
+        // check balance of sender
         let ownerETHBalance = await web3.eth.getBalance(q2.address);
         assert.equal(
           ownerETHBalance.minus(currentOwnerBalance).eq(expectedOwnerEarnings),
           true
         );
 
-        check totalSupply, price and tranche
-        let [totalSupply, price, tranche] = await Promise.all([
+        // check totalSupply and tranche
+        let [totalSupply, tranche] = await Promise.all([
           contract.totalSupply(),
-          contract.price(),
           contract.tranche()
         ]);
         assert.equal(
           totalSupply.eq(currentTotalSupply.add(expectedQuarters)),
           true
         ); // new totalSupply = totalSupply + nq (expectedQuarters)
-        assert.equal(price.toNumber(), 4000, true);
       });
 
       it("2. more than tranche: should get tokens size of tranche for ethers and owner gets cut", async function() {
@@ -375,15 +355,13 @@ contract("Quarters", function(accounts) {
         let currentOwnerBalance = await web3.eth.getBalance(q2.address);
         let [
           currentTotalSupply,
-          currentPrice,
           currentTranche
         ] = await Promise.all([
           contract.totalSupply(),
-          contract.price(),
           contract.tranche()
         ]);
 
-        let etherValue = web3.toWei(10); // 10 ether -> should get 1,998,000 quarters but will get 1,800,000 quarters
+        let etherValue = web3.toWei(21);
         let expectedQuarters = currentTranche;
         let expectedOwnerEarnings = new BigNumber(etherValue).mul(15).div(100);
 
@@ -398,7 +376,6 @@ contract("Quarters", function(accounts) {
 
         let expectedTrache = new BigNumber(currentTranche).mul(2);
         assert.equal(log.args._tranche.eq(expectedTrache), true);
-        assert.equal(log.args._price.toNumber(), 4000, true);
 
         log = receipt.logs[1];
         assert.equal(log.event, "QuartersOrdered");
@@ -418,18 +395,16 @@ contract("Quarters", function(accounts) {
         );
 
         // check totalSupply, price and tranche
-        let [totalSupply, price, tranche] = await Promise.all([
+        let [totalSupply, tranche] = await Promise.all([
           contract.totalSupply(),
-          contract.price(),
           contract.tranche()
         ]);
         assert.equal(
           totalSupply.eq(currentTotalSupply.add(expectedQuarters)),
           true
-        ); // new totalSupply = totalSupply + nq (expectedQuarters)
-        assert.equal(price.toNumber(), 4000, true);
+        );
         assert.equal(tranche.eq(currentTranche.mul(2)), true); // new tranche = tranche * 2 / 1
-        assert.equal(tranche.eq(3600000), true); // around 3600k
+        assert.equal(tranche.eq(160000), true);
 
         console.log(
           web3.fromWei(await web3.eth.getBalance(contract.address)).toString()
@@ -445,14 +420,12 @@ contract("Quarters", function(accounts) {
   //
   describe("withdraw", async function() {
     let contract; // contract with account 0
-    let ethRate = 1000;
 
     // runs before test cases
     before(async function() {
       const q2 = await Q2.new(accounts[0])
       contract = await Quarters.new(
         q2.address,
-        initialPrice,
         firstTranche,
         { from: accounts[0] } // `from` key is important to change transaction creator
       );

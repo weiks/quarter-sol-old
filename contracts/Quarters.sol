@@ -83,7 +83,7 @@ contract Quarters is Ownable, StandardToken {
     uint256 firstTranche
   ) public {
     q2 = _q2;
-    tranche = firstTranche;             // number of Quarters to be sold before increasing price
+    tranche = firstTranche; // number of Quarters to be sold before increasing price
   }
 
   function setEthRate (uint16 rate) onlyOwner public {
