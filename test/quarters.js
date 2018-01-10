@@ -137,7 +137,7 @@ contract("Quarters", function(accounts) {
 
       // check rate if it's not changed
       let newRate = await contract.ethRate();
-      assert.equal(newRate.eq(1000), true);
+      assert.equal(newRate.eq(4000), true);
 
       // check if eth price can be set by accounts[1]
       receipt = await contract.setEthRate(1000, { from: accounts[1] });
