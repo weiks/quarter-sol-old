@@ -5,7 +5,8 @@
   "private": "true",
   "scripts": {
     "testrpc": "yarn run ganache-cli --gaslimit 150000000",
-    "test": "yarn run truffle test"
+    "test": "yarn run truffle test",
+    "truffle": "truffle"
   },
   "dependencies": {
     "ethereumjs-util": "^5.1.3",
@@ -16,6 +17,7 @@
     "babel-polyfill": "^6.26.0",
     "babel-preset-es2015": "^6.24.1",
     "babel-preset-stage-2": "^6.24.1",
-    "babel-preset-stage-3": "^6.24.1"
+    "babel-preset-stage-3": "^6.24.1",
+    "babel-register": "^6.26.0"
   }
 }
