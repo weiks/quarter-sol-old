@@ -417,6 +417,7 @@ contract Quarters is Ownable, StandardToken {
     balances[msg.sender] = 0;
 
     totalSupply = totalSupply - _amount;
+    outstandingQuarters = outstandingQuarters - _amount;
     MigrationTarget(migrationTarget).migrateFrom(msg.sender, _amount, rewards[msg.sender], trueBuy[msg.sender], developers[msg.sender]);
     Migrate(msg.sender, _amount);
 
