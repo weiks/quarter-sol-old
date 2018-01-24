@@ -3,6 +3,7 @@ pragma solidity ^0.4.18;
 import './Ownable.sol';
 import './StandardToken.sol';
 import './Q2.sol';
+import './MigrationTarget.sol';
 
 interface TokenRecipient {
   function receiveApproval(address _from, uint256 _value, address _token, bytes _extraData) public;
@@ -392,5 +393,43 @@ contract Quarters is Ownable, StandardToken {
     }
 
     return microRate; // rate for micro developer
+  }
+
+
+  //
+  // Migrations
+  //
+
+  // Target contract
+  address public migrationTarget;
+  bool public migrating = false;
+
+  // Migrate event
+  event Migrate(address indexed _from, uint256 _value);
+
+  //
+  // Migrate tokens to the new token contract.
+  //
+  function migrate() public {
+    require(migrationTarget != address(0));
+    uint256 _amount = balances[msg.sender];
+    require(_amount > 0);
+    balances[msg.sender] = 0;
+
+    totalSupply = totalSupply - _amount;
+    MigrationTarget(migrationTarget).migrateFrom(msg.sender, _amount, rewards[msg.sender], trueBuy[msg.sender], developers[msg.sender]);
+    Migrate(msg.sender, _amount);
+
+    rewards[msg.sender] = 0;
+    trueBuy[msg.sender] = 0;
+    developers[msg.sender] = false;
+  }
+
+  //
+  // Set address of migration target contract
+  // @param _target The address of the MigrationTarget contract
+  //
+  function setMigrationTarget(address _target) onlyOwner public {
+    migrationTarget = _target;
   }
 }
