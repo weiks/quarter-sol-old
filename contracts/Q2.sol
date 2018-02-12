@@ -1,9 +1,12 @@
 pragma solidity ^0.4.18;
 
 import './Ownable.sol';
+import './SafeMath.sol';
 import './DividendToken.sol';
 
 contract Q2 is Ownable, DividendToken {
+  using SafeMath for uint256;
+
   string public name = "Q2";
   string public symbol = "Q2";
   uint8 public decimals = 18;
@@ -12,8 +15,8 @@ contract Q2 is Ownable, DividendToken {
   mapping(address => bool) public whitelistedAddresses;
 
   // token creation cap
-  uint256 public creationCap = 15000000 * (10**18); // 15M
-  uint256 public reservedFund = 10000000 * (10**18); // 10M
+  uint256 public creationCap = 15000000 * (10 ** 18); // 15M
+  uint256 public reservedFund = 10000000 * (10 ** 18); // 10M
 
   // stage info
   struct Stage {
@@ -46,12 +49,11 @@ contract Q2 is Ownable, DividendToken {
 
   function mintTokens(address to, uint256 value) internal {
     require(value > 0);
-    balances[to] += value;
-    totalSupply += value;
-
+    balances[to] = balances[to].add(value);
+    totalSupply = totalSupply.add(value);
     require(totalSupply <= creationCap);
-    assert(totalSupply >= value);
 
+    // broadcast event
     MintTokens(to, value);
   }
 
@@ -72,7 +74,12 @@ contract Q2 is Ownable, DividendToken {
     mintTokens(msg.sender, tokens);
   }
 
-  function startStage(uint256 _exchangeRate, uint256 _cap, uint256 _startBlock, uint256 _endBlock) public onlyOwner {
+  function startStage(
+    uint256 _exchangeRate,
+    uint256 _cap,
+    uint256 _startBlock,
+    uint256 _endBlock
+  ) public onlyOwner {
     require(_exchangeRate > 0 && _cap > 0);
     require(_startBlock > block.number);
     require(_startBlock < _endBlock);
@@ -81,7 +88,8 @@ contract Q2 is Ownable, DividendToken {
     Stage memory currentObj = stages[currentStage];
     require(block.number > currentObj.endBlock);
 
-    currentStage += 1;
+    // increment current stage
+    currentStage = currentStage + 1;
 
     // create new stage object
     Stage memory s = Stage({
@@ -93,6 +101,7 @@ contract Q2 is Ownable, DividendToken {
     });
     stages[currentStage] = s;
 
+    // broadcast stage started event
     StageStarted(currentStage, totalSupply, this.balance);
   }
 
@@ -100,7 +109,13 @@ contract Q2 is Ownable, DividendToken {
     ethWallet.transfer(this.balance);
   }
 
-  function getCurrentStage() view public returns (uint8 number, uint256 exchangeRate, uint256 startBlock, uint256 endBlock, uint256 cap) {
+  function getCurrentStage() view public returns (
+    uint8 number,
+    uint256 exchangeRate,
+    uint256 startBlock,
+    uint256 endBlock,
+    uint256 cap
+  ) {
     Stage memory currentObj = stages[currentStage];
     number = currentObj.number;
     exchangeRate = currentObj.exchangeRate;
