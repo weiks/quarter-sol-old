@@ -69,7 +69,7 @@ contract Q2 is Ownable, DividendToken {
     require(block.number >= stage.startBlock && block.number <= stage.endBlock);
 
     uint256 tokens = msg.value * stage.exchangeRate;
-    require(totalSupply + tokens <= stage.cap);
+    require(totalSupply.add(tokens) <= stage.cap);
 
     mintTokens(msg.sender, tokens);
   }
@@ -84,9 +84,12 @@ contract Q2 is Ownable, DividendToken {
     require(_startBlock > block.number);
     require(_startBlock < _endBlock);
 
-    // check if any stage is running
+    // stop current stage if it's running
     Stage memory currentObj = stages[currentStage];
-    require(block.number > currentObj.endBlock);
+    if (currentObj.endBlock > 0) {
+      // broadcast stage end event
+      StageEnded(currentStage, totalSupply, this.balance);
+    }
 
     // increment current stage
     currentStage = currentStage + 1;
