@@ -11,6 +11,8 @@ contract Q2 is Ownable, DividendToken {
   string public symbol = "Q2";
   uint8 public decimals = 18;
 
+  bool public whitelist = true;
+
   // whitelist addresses
   mapping(address => bool) public whitelistedAddresses;
 
@@ -32,6 +34,7 @@ contract Q2 is Ownable, DividendToken {
   event StageStarted(uint8 _stage, uint256 _totalSupply, uint256 _balance);
   event StageEnded(uint8 _stage, uint256 _totalSupply, uint256 _balance);
   event WhitelistStatusChanged(address indexed _address, bool status);
+  event WhitelistChanged(bool status);
 
   // eth wallet
   address public ethWallet;
@@ -62,7 +65,7 @@ contract Q2 is Ownable, DividendToken {
   }
 
   function buyTokens() public payable {
-    require(whitelistedAddresses[msg.sender] == true);
+    require(whitelist==false || whitelistedAddresses[msg.sender] == true);
     require(msg.value > 0);
 
     Stage memory stage = stages[currentStage];
@@ -135,5 +138,10 @@ contract Q2 is Ownable, DividendToken {
   function changeRestrictedtStatus(address _address, bool status) public onlyOwner {
     restrictedAddresses[_address] = status;
     RestrictedStatusChanged(_address, status);
+  }
+  
+  function changeWhitelist(bool status) public onlyOwner {
+     whitelist = status;
+     WhitelistChanged(status);
   }
 }
