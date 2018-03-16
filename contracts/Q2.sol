@@ -131,4 +131,9 @@ contract Q2 is Ownable, DividendToken {
     whitelistedAddresses[_address] = status;
     WhitelistStatusChanged(_address, status);
   }
+  
+  function changeRestrictedtStatus(address _address, bool status) public onlyOwner {
+    restrictedAddresses[_address] = status;
+    RestrictedStatusChanged(_address, status);
+  }
 }
