@@ -18,6 +18,11 @@ contract DividendToken is StandardToken {
   uint256 public totalDividend;
   uint256 public unclaimedDividend;
 
+  // restricted addresses
+  mapping(address => bool) public restrictedAddresses;
+  
+  event RestrictedStatusChanged(address indexed _address, bool status);
+
   /**
    * Get dividend amount for given account
    *
@@ -57,6 +62,8 @@ contract DividendToken is StandardToken {
    * @param _value the amount to send
    */
   function transfer(address _to, uint256 _value) public returns (bool success) {
+    // Require that the sender is not restricted
+    require(restrictedAddresses[msg.sender] == false);
     updateAccount(_to);
     updateAccount(msg.sender);
     return super.transfer(_to, _value);
