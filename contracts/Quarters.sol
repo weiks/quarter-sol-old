@@ -226,7 +226,7 @@ contract Quarters is Ownable, StandardToken {
     Burn(msg.sender, _value);
 
     // log rate change
-    BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, this.balance, totalSupply);
+    BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, address(this).balance, totalSupply);
     return true;
   }
 
@@ -248,7 +248,7 @@ contract Quarters is Ownable, StandardToken {
     Burn(_from, _value);
 
     // log rate change
-    BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, this.balance, totalSupply);
+    BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, address(this).balance, totalSupply);
     return true;
   }
 
@@ -277,7 +277,7 @@ contract Quarters is Ownable, StandardToken {
       tranche = (tranche * trancheNumerator) / trancheDenominator;
 
       // fire event for tranche change
-      TrancheIncreased(tranche, this.balance, outstandingQuarters);
+      TrancheIncreased(tranche, address(this).balance, outstandingQuarters);
     }
   }
 
@@ -306,7 +306,7 @@ contract Quarters is Ownable, StandardToken {
     QuartersOrdered(buyer, msg.value, nq);
 
     // log rate change
-    BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, this.balance, totalSupply);
+    BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, address(this).balance, totalSupply);
 
     // return nq
     return nq;
@@ -345,8 +345,8 @@ contract Quarters is Ownable, StandardToken {
     uint256 earnings = value * baseRate;
     uint256 rate = getRate(value); // get rate from value and tranche
     uint256 earningsWithBonus = (rate * earnings) / 100;
-    if (earningsWithBonus > this.balance) {
-      earnings = this.balance;
+    if (earningsWithBonus > address(this).balance) {
+      earnings = address(this).balance;
     } else {
       earnings = earningsWithBonus;
     }
@@ -354,7 +354,7 @@ contract Quarters is Ownable, StandardToken {
     balances[msg.sender] -= value;
     outstandingQuarters -= value; // update the outstanding Quarters
 
-    uint256 etherPool = this.balance - earnings;
+    uint256 etherPool = address(this).balance - earnings;
     if (rate == megaRate) {
       MegaEarnings(msg.sender, earnings, baseRate, tranche, outstandingQuarters, etherPool); // with current base rate
     }
@@ -366,7 +366,7 @@ contract Quarters is Ownable, StandardToken {
     msg.sender.transfer(earnings);
 
     // log rate change
-    BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, this.balance, totalSupply);
+    BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, address(this).balance, totalSupply);
   }
 
   function disburse() public payable {
@@ -375,10 +375,10 @@ contract Quarters is Ownable, StandardToken {
 
   function getBaseRate () view public returns (uint256) {
     if (outstandingQuarters > 0) {
-      return (this.balance - reserveETH) / outstandingQuarters;
+      return (address(this).balance - reserveETH) / outstandingQuarters;
     }
 
-    return (this.balance - reserveETH);
+    return (address(this).balance - reserveETH);
   }
 
   function getRate (uint256 value) view public returns (uint32) {
