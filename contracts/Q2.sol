@@ -91,7 +91,7 @@ contract Q2 is Ownable, DividendToken {
     Stage memory currentObj = stages[currentStage];
     if (currentObj.endBlock > 0) {
       // broadcast stage end event
-      StageEnded(currentStage, totalSupply, this.balance);
+      StageEnded(currentStage, totalSupply, adddress(this).balance);
     }
 
     // increment current stage
@@ -108,11 +108,11 @@ contract Q2 is Ownable, DividendToken {
     stages[currentStage] = s;
 
     // broadcast stage started event
-    StageStarted(currentStage, totalSupply, this.balance);
+    StageStarted(currentStage, totalSupply, address(this).balance);
   }
 
   function withdraw() public onlyOwner {
-    ethWallet.transfer(this.balance);
+    ethWallet.transfer(address(this).balance);
   }
 
   function getCurrentStage() view public returns (
