@@ -91,7 +91,7 @@ contract Q2 is Ownable, DividendToken {
     Stage memory currentObj = stages[currentStage];
     if (currentObj.endBlock > 0) {
       // broadcast stage end event
-      StageEnded(currentStage, totalSupply, adddress(this).balance);
+      emit StageEnded(currentStage, totalSupply, address(this).balance);
     }
 
     // increment current stage
@@ -133,6 +133,11 @@ contract Q2 is Ownable, DividendToken {
   function changeWhitelistStatus(address _address, bool status) public onlyOwner {
     whitelistedAddresses[_address] = status;
     emit WhitelistStatusChanged(_address, status);
+  }
+
+  function changeRestrictedtStatus(address _address, bool status) public onlyOwner {
+    restrictedAddresses[_address] = status;
+    emit RestrictedStatusChanged(_address, status);
   }
   
   function changeWhitelist(bool status) public onlyOwner {

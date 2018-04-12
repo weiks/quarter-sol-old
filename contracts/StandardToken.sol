@@ -20,7 +20,7 @@ contract StandardToken is ERC20 {
     balances[_from] -= _value;
     // Add the same to the recipient
     balances[_to] += _value;
-    Transfer(_from, _to, _value);
+    emit Transfer(_from, _to, _value);
     // Asserts are used to use static analysis to find bugs in your code. They should never fail
     assert(balances[_from] + balances[_to] == previousBalances);
 
@@ -68,7 +68,7 @@ contract StandardToken is ERC20 {
    */
   function approve(address _spender, uint256 _value) public returns (bool success) {
     allowed[msg.sender][_spender] = _value;
-    Approval(msg.sender, _spender, _value);
+    emit Approval(msg.sender, _spender, _value);
     return true;
   }
 

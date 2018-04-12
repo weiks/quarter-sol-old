@@ -22,7 +22,7 @@ contract Ownable {
    */
   function transferOwnership(address newOwner) onlyOwner public {
     require(newOwner != address(0));
-    OwnershipChanged(owner, newOwner);
+    emit OwnershipChanged(owner, newOwner);
     owner = newOwner;
   }
 }

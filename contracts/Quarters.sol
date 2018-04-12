@@ -6,7 +6,7 @@ import './Q2.sol';
 import './MigrationTarget.sol';
 
 interface TokenRecipient {
-  function receiveApproval(address _from, uint256 _value, address _token, bytes _extraData) public;
+  function receiveApproval(address _from, uint256 _value, address _token, bytes _extraData) external;
 }
 
 contract Quarters is Ownable, StandardToken {
@@ -90,8 +90,8 @@ contract Quarters is Ownable, StandardToken {
   function setEthRate (uint16 rate) onlyOwner public {
     // Ether price is set in Wei
     require(rate > 0);
-    EthRateChanged(ethRate, rate);
     ethRate = rate;
+    emit EthRateChanged(ethRate, rate);
   }
 
   /**
@@ -162,7 +162,6 @@ contract Quarters is Ownable, StandardToken {
 
       balances[_address] += _reward;
       allowed[_address][msg.sender] += _reward; // set allowance
-      Approval(_address, msg.sender, _reward);
 
       totalSupply += _reward;
       outstandingQuarters += _reward;
@@ -177,8 +176,8 @@ contract Quarters is Ownable, StandardToken {
       // tranche size change
       _changeTrancheIfNeeded();
 
-      // reward event
-      Reward(_address, _reward, outstandingQuarters, totalSupply);
+      emit Approval(_address, msg.sender, _reward);
+      emit Reward(_address, _reward, outstandingQuarters, totalSupply);
     }
   }
 
@@ -187,7 +186,7 @@ contract Quarters is Ownable, StandardToken {
    */
   function setDeveloperStatus (address _address, bool status) onlyOwner public {
     developers[_address] = status;
-    DeveloperStatusChanged(_address, status);
+    emit DeveloperStatusChanged(_address, status);
   }
 
   /**
@@ -223,10 +222,10 @@ contract Quarters is Ownable, StandardToken {
     balances[msg.sender] -= _value;            // Subtract from the sender
     totalSupply -= _value;                     // Updates totalSupply
     outstandingQuarters -= _value;              // Update outstanding quarters
-    Burn(msg.sender, _value);
+    emit Burn(msg.sender, _value);
 
     // log rate change
-    BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, address(this).balance, totalSupply);
+    emit BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, address(this).balance, totalSupply);
     return true;
   }
 
@@ -245,10 +244,10 @@ contract Quarters is Ownable, StandardToken {
     allowed[_from][msg.sender] -= _value;              // Subtract from the sender's allowance
     totalSupply -= _value;                      // Update totalSupply
     outstandingQuarters -= _value;              // Update outstanding quarters
-    Burn(_from, _value);
+    emit Burn(_from, _value);
 
     // log rate change
-    BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, address(this).balance, totalSupply);
+    emit BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, address(this).balance, totalSupply);
     return true;
   }
 
@@ -268,7 +267,7 @@ contract Quarters is Ownable, StandardToken {
 
     // allow donor (msg.sender) to spend buyer's tokens
     allowed[buyer][msg.sender] += _value;
-    Approval(buyer, msg.sender, _value);
+    emit Approval(buyer, msg.sender, _value);
   }
 
   function _changeTrancheIfNeeded() internal {
@@ -277,7 +276,7 @@ contract Quarters is Ownable, StandardToken {
       tranche = (tranche * trancheNumerator) / trancheDenominator;
 
       // fire event for tranche change
-      TrancheIncreased(tranche, address(this).balance, outstandingQuarters);
+      emit TrancheIncreased(tranche, address(this).balance, outstandingQuarters);
     }
   }
 
@@ -299,14 +298,14 @@ contract Quarters is Ownable, StandardToken {
     // change tranche size
     _changeTrancheIfNeeded();
 
-    // transfer owner's cut
-    Q2(q2).disburse.value(msg.value * 15 / 100)();
-
     // event for quarters order (invoice)
-    QuartersOrdered(buyer, msg.value, nq);
+    emit QuartersOrdered(buyer, msg.value, nq);
 
     // log rate change
-    BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, address(this).balance, totalSupply);
+    emit BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, address(this).balance, totalSupply);
+
+    // transfer owner's cut
+    Q2(q2).disburse.value(msg.value * 15 / 100)();
 
     // return nq
     return nq;
@@ -329,7 +328,7 @@ contract Quarters is Ownable, StandardToken {
     if (_transfer(_from, _to, _value)) {
       // allow msg.sender to spend _to's tokens
       allowed[_to][msg.sender] += _value;
-      Approval(_to, msg.sender, _value);
+      emit Approval(_to, msg.sender, _value);
       return true;
     }
 
@@ -356,18 +355,18 @@ contract Quarters is Ownable, StandardToken {
 
     uint256 etherPool = address(this).balance - earnings;
     if (rate == megaRate) {
-      MegaEarnings(msg.sender, earnings, baseRate, tranche, outstandingQuarters, etherPool); // with current base rate
+      emit MegaEarnings(msg.sender, earnings, baseRate, tranche, outstandingQuarters, etherPool); // with current base rate
     }
 
     // event for withdraw
-    Withdraw(msg.sender, earnings, baseRate, tranche, outstandingQuarters, etherPool);  // with current base rate
-
-    // earning for developers
-    msg.sender.transfer(earnings);
+    emit Withdraw(msg.sender, earnings, baseRate, tranche, outstandingQuarters, etherPool);  // with current base rate
 
     // log rate change
-    BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, address(this).balance, totalSupply);
-  }
+    emit BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, address(this).balance, totalSupply);
+
+    // earning for developers
+    msg.sender.transfer(earnings);  
+}
 
   function disburse() public payable {
     reserveETH += msg.value;
@@ -418,12 +417,13 @@ contract Quarters is Ownable, StandardToken {
 
     totalSupply = totalSupply - _amount;
     outstandingQuarters = outstandingQuarters - _amount;
-    MigrationTarget(migrationTarget).migrateFrom(msg.sender, _amount, rewards[msg.sender], trueBuy[msg.sender], developers[msg.sender]);
-    Migrate(msg.sender, _amount);
 
     rewards[msg.sender] = 0;
     trueBuy[msg.sender] = 0;
     developers[msg.sender] = false;
+
+    emit Migrate(msg.sender, _amount);
+    MigrationTarget(migrationTarget).migrateFrom(msg.sender, _amount, rewards[msg.sender], trueBuy[msg.sender], developers[msg.sender]);
   }
 
   //

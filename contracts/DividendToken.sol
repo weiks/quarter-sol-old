@@ -96,9 +96,4 @@ contract DividendToken is StandardToken {
     // transfer dividend amount
     msg.sender.transfer(dividendAmount);
   }
-  
-  function changeRestrictedtStatus(address _address, bool status) public onlyOwner {
-    restrictedAddresses[_address] = status;
-    emit RestrictedStatusChanged(_address, status);
-  }
 }
