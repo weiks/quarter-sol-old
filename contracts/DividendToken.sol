@@ -18,11 +18,6 @@ contract DividendToken is StandardToken {
   uint256 public totalDividend;
   uint256 public unclaimedDividend;
 
-  // restricted addresses
-  mapping(address => bool) public restrictedAddresses;
-  
-  event RestrictedStatusChanged(address indexed _address, bool status);
-
   /**
    * Get dividend amount for given account
    *
