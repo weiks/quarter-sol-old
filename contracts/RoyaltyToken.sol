@@ -5,8 +5,8 @@ import './ERC20.sol';
 import './StandardToken.sol';
 
 
-/*  Dividend token */
-contract DividendToken is StandardToken {
+/*  Royalty token */
+contract RoyaltyToken is StandardToken {
   using SafeMath for uint256;
   // restricted addresses	
   mapping(address => bool) public restrictedAddresses;
@@ -15,32 +15,32 @@ contract DividendToken is StandardToken {
 
   struct Account {
     uint256 balance;
-    uint256 lastDividendPoint;
+    uint256 lastRoyaltyPoint;
   }
 
   mapping(address => Account) public accounts;
-  uint256 public totalDividend;
-  uint256 public unclaimedDividend;
+  uint256 public totalRoyalty;
+  uint256 public unclaimedRoyalty;
 
   /**
-   * Get dividend amount for given account
+   * Get Royalty amount for given account
    *
-   * @param account The address for dividend account
+   * @param account The address for Royalty account
    */
-  function dividendsOwing(address account) public view returns (uint256) {
-    uint256 newDividend = totalDividend.sub(accounts[account].lastDividendPoint);
-    return balances[account].mul(newDividend).div(totalSupply);
+  function RoyaltysOwing(address account) public view returns (uint256) {
+    uint256 newRoyalty = totalRoyalty.sub(accounts[account].lastRoyaltyPoint);
+    return balances[account].mul(newRoyalty).div(totalSupply);
   }
 
   /**
-   * @dev Update account for dividend
+   * @dev Update account for Royalty
    * @param account The address of owner
    */
   function updateAccount(address account) internal {
-    uint256 owing = dividendsOwing(account);
-    accounts[account].lastDividendPoint = totalDividend;
+    uint256 owing = RoyaltysOwing(account);
+    accounts[account].lastRoyaltyPoint = totalRoyalty;
     if (owing > 0) {
-      unclaimedDividend = unclaimedDividend.sub(owing);
+      unclaimedRoyalty = unclaimedRoyalty.sub(owing);
       accounts[account].balance = accounts[account].balance.add(owing);
     }
   }
@@ -49,9 +49,9 @@ contract DividendToken is StandardToken {
     require(totalSupply > 0);
     require(msg.value > 0);
 
-    uint256 newDividend = msg.value;
-    totalDividend = totalDividend.add(newDividend);
-    unclaimedDividend = unclaimedDividend.add(newDividend);
+    uint256 newRoyalty = msg.value;
+    totalRoyalty = totalRoyalty.add(newRoyalty);
+    unclaimedRoyalty = unclaimedRoyalty.add(newRoyalty);
   }
 
   /**
@@ -85,15 +85,15 @@ contract DividendToken is StandardToken {
     return super.transferFrom(_from, _to, _value);
   }
 
-  function withdrawDividend() public {
+  function withdrawRoyalty() public {
     updateAccount(msg.sender);
 
-    // retrieve dividend amount
-    uint256 dividendAmount = accounts[msg.sender].balance;
-    require(dividendAmount > 0);
+    // retrieve Royalty amount
+    uint256 RoyaltyAmount = accounts[msg.sender].balance;
+    require(RoyaltyAmount > 0);
     accounts[msg.sender].balance = 0;
 
-    // transfer dividend amount
-    msg.sender.transfer(dividendAmount);
+    // transfer Royalty amount
+    msg.sender.transfer(RoyaltyAmount);
   }
 }

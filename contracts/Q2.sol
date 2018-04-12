@@ -2,9 +2,9 @@ pragma solidity ^0.4.18;
 
 import './Ownable.sol';
 import './SafeMath.sol';
-import './DividendToken.sol';
+import './RoyaltyToken.sol';
 
-contract Q2 is Ownable, DividendToken {
+contract Q2 is Ownable, RoyaltyToken {
   using SafeMath for uint256;
 
   string public name = "Q2";
