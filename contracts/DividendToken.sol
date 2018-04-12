@@ -8,6 +8,10 @@ import './StandardToken.sol';
 /*  Dividend token */
 contract DividendToken is StandardToken {
   using SafeMath for uint256;
+  // restricted addresses	
+  mapping(address => bool) public restrictedAddresses;
+  
+  event RestrictedStatusChanged(address indexed _address, bool status);
 
   struct Account {
     uint256 balance;
@@ -91,5 +95,10 @@ contract DividendToken is StandardToken {
 
     // transfer dividend amount
     msg.sender.transfer(dividendAmount);
+  }
+  
+  function changeRestrictedtStatus(address _address, bool status) public onlyOwner {
+    restrictedAddresses[_address] = status;
+    emit RestrictedStatusChanged(_address, status);
   }
 }
