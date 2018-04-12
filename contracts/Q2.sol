@@ -57,7 +57,7 @@ contract Q2 is Ownable, DividendToken {
     require(totalSupply <= creationCap);
 
     // broadcast event
-    MintTokens(to, value);
+    emit MintTokens(to, value);
   }
 
   function () public payable {
@@ -108,7 +108,7 @@ contract Q2 is Ownable, DividendToken {
     stages[currentStage] = s;
 
     // broadcast stage started event
-    StageStarted(currentStage, totalSupply, address(this).balance);
+    emit StageStarted(currentStage, totalSupply, address(this).balance);
   }
 
   function withdraw() public onlyOwner {
@@ -132,16 +132,16 @@ contract Q2 is Ownable, DividendToken {
 
   function changeWhitelistStatus(address _address, bool status) public onlyOwner {
     whitelistedAddresses[_address] = status;
-    WhitelistStatusChanged(_address, status);
+    emit WhitelistStatusChanged(_address, status);
   }
   
   function changeRestrictedtStatus(address _address, bool status) public onlyOwner {
     restrictedAddresses[_address] = status;
-    RestrictedStatusChanged(_address, status);
+    emit RestrictedStatusChanged(_address, status);
   }
   
   function changeWhitelist(bool status) public onlyOwner {
      whitelist = status;
-     WhitelistChanged(status);
+     emit WhitelistChanged(status);
   }
 }
