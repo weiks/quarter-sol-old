@@ -1,13 +1,13 @@
 pragma solidity ^0.4.18;
 
 import './Ownable.sol';
-import './StandardToken.sol';
+import './RestrictedStandardToken.sol';
 
 interface TokenRecipient {
   function receiveApproval(address _from, uint256 _value, address _token, bytes _extraData) external;
 }
 
-contract Quarters is Ownable, StandardToken {
+contract Quarters is Ownable, RestrictedStandardToken {
   // Public variables of the token
   string public name = "Quarters";
   string public symbol = "Q";

@@ -1,7 +1,7 @@
 pragma solidity ^0.4.18;
 
 import './Ownable.sol';
-import './StandardToken.sol';
+import './RestrictedStandardToken.sol';
 import './Q2.sol';
 import './MigrationTarget.sol';
 
@@ -9,7 +9,7 @@ interface TokenRecipient {
   function receiveApproval(address _from, uint256 _value, address _token, bytes _extraData) external;
 }
 
-contract Quarters is Ownable, StandardToken {
+contract Quarters is Ownable, RestrictedStandardToken {
   // Public variables of the token
   string public name = "Quarters";
   string public symbol = "Q";
@@ -17,10 +17,6 @@ contract Quarters is Ownable, StandardToken {
 
   uint16 public ethRate = 4000; // Quarters/ETH
   uint256 public tranche = 40000; // Number of Quarters in initial tranche
-
-  // List of developers
-  // address -> status
-  mapping (address => bool) public developers;
 
   uint256 public outstandingQuarters;
   address public q2;
@@ -59,20 +55,11 @@ contract Quarters is Ownable, StandardToken {
   event Burn(address indexed from, uint256 value);
 
   event QuartersOrdered(address indexed sender, uint256 ethValue, uint256 tokens);
-  event DeveloperStatusChanged(address indexed developer, bool status);
   event TrancheIncreased(uint256 _tranche, uint256 _etherPool, uint256 _outstandingQuarters);
   event MegaEarnings(address indexed developer, uint256 value, uint256 _baseRate, uint256 _tranche, uint256 _outstandingQuarters, uint256 _etherPool);
   event Withdraw(address indexed developer, uint256 value, uint256 _baseRate, uint256 _tranche, uint256 _outstandingQuarters, uint256 _etherPool);
   event BaseRateChanged(uint256 _baseRate, uint256 _tranche, uint256 _outstandingQuarters, uint256 _etherPool,  uint256 _totalSupply);
   event Reward(address indexed _address, uint256 value, uint256 _outstandingQuarters, uint256 _totalSupply);
-
-  /**
-   * developer modifier
-   */
-  modifier onlyActiveDeveloper() {
-    require(developers[msg.sender] == true);
-    _;
-  }
 
   /**
    * Constructor function
@@ -181,14 +168,6 @@ contract Quarters is Ownable, StandardToken {
       emit Approval(_address, msg.sender, _reward);
       emit Reward(_address, _reward, outstandingQuarters, totalSupply);
     }
-  }
-
-  /**
-   * Developer status
-   */
-  function setDeveloperStatus (address _address, bool status) onlyOwner public {
-    developers[_address] = status;
-    emit DeveloperStatusChanged(_address, status);
   }
 
   /**
@@ -337,7 +316,7 @@ contract Quarters is Ownable, StandardToken {
     return false;
   }
 
-  function withdraw(uint256 value) onlyActiveDeveloper public {
+  function withdraw(uint256 value) onlyApproved public {
     require(balances[msg.sender] >= value);
 
     uint256 baseRate = getBaseRate();
@@ -422,10 +401,10 @@ contract Quarters is Ownable, StandardToken {
 
     rewards[msg.sender] = 0;
     trueBuy[msg.sender] = 0;
-    developers[msg.sender] = false;
+    approved[msg.sender] = false;
 
     emit Migrate(msg.sender, _amount);
-    MigrationTarget(migrationTarget).migrateFrom(msg.sender, _amount, rewards[msg.sender], trueBuy[msg.sender], developers[msg.sender]);
+    MigrationTarget(migrationTarget).migrateFrom(msg.sender, _amount, rewards[msg.sender], trueBuy[msg.sender], approved[msg.sender]);
   }
 
   //

@@ -1,15 +1,29 @@
 pragma solidity ^0.4.18;
 
 import './ERC20.sol';
+import './Ownable.sol';
 
 /*  ERC 20 token */
-contract StandardToken is ERC20 {
+contract RestrictedStandardToken is Ownable, ERC20 {
+
+  event ApprovedStatusChanged(address indexed _address, bool status);
+
+  /**
+   * approved modifier
+   */
+  modifier onlyApproved() {
+    require(approved[msg.sender] == true);
+    _;
+  }
+
   /**
    * Internal transfer, only can be called by this contract
    */
   function _transfer(address _from, address _to, uint _value) internal returns (bool success) {
     // Prevent transfer to 0x0 address. Use burn() instead
     require(_to != address(0));
+    // Check if receiver is approved
+    require(approved[_from] == true || approved[_to] == true);
     // Check if the sender has enough
     require(balances[_from] >= _value);
     // Check for overflows
@@ -76,6 +90,15 @@ contract StandardToken is ERC20 {
     return allowed[_owner][_spender];
   }
 
+  /**
+   * Approved status
+   */
+  function setApprovedStatus (address _address, bool status) onlyOwner public {
+    approved[_address] = status;
+    emit ApprovedStatusChanged(_address, status);
+  }
+
+  mapping (address => bool) public approved;
   mapping (address => uint256) public balances;
   mapping (address => mapping (address => uint256)) public allowed;
 }

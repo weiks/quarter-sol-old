@@ -2,11 +2,11 @@ pragma solidity ^0.4.18;
 
 import './SafeMath.sol';
 import './ERC20.sol';
-import './StandardToken.sol';
+import './RestrictedStandardToken.sol';
 
 
 /*  Royalty token */
-contract RoyaltyToken is StandardToken {
+contract RoyaltyToken is RestrictedStandardToken {
   using SafeMath for uint256;
   // restricted addresses	
   mapping(address => bool) public restrictedAddresses;
