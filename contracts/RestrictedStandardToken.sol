@@ -20,7 +20,7 @@ contract RestrictedStandardToken is Ownable, ERC20 {
    * Internal transfer, only can be called by this contract
    */
   function _transfer(address _from, address _to, uint _value) internal returns (bool success) {
-    // Prevent transfer to 0x0 address. Use burn() instead
+    // Prevent transfer to 0x0 address.
     require(_to != address(0));
     // Check if receiver is approved
     require(approved[_from] == true || approved[_to] == true);

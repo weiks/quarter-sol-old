@@ -51,9 +51,6 @@ contract Quarters is Ownable, RestrictedStandardToken {
   // ETH rate changed
   event EthRateChanged(uint16 currentRate, uint16 newRate);
 
-  // This notifies clients about the amount burnt
-  event Burn(address indexed from, uint256 value);
-
   event QuartersOrdered(address indexed sender, uint256 ethValue, uint256 tokens);
   event TrancheIncreased(uint256 _tranche, uint256 _etherPool, uint256 _outstandingQuarters);
   event MegaEarnings(address indexed developer, uint256 value, uint256 _baseRate, uint256 _tranche, uint256 _outstandingQuarters, uint256 _etherPool);
@@ -189,47 +186,6 @@ contract Quarters is Ownable, RestrictedStandardToken {
     }
 
     return false;
-  }
-
-  /**
-   * Destroy tokens
-   *
-   * Remove `_value` tokens from the system irreversibly
-   *
-   * @param _value the amount of money to burn
-   */
-  function burn(uint256 _value) public returns (bool success) {
-    require(balances[msg.sender] >= _value);   // Check if the sender has enough
-    balances[msg.sender] -= _value;            // Subtract from the sender
-    totalSupply -= _value;                     // Updates totalSupply
-    outstandingQuarters -= _value;              // Update outstanding quarters
-    emit Burn(msg.sender, _value);
-
-    // log rate change
-    emit BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, address(this).balance, totalSupply);
-    return true;
-  }
-
-  /**
-   * Destroy tokens from other account
-   *
-   * Remove `_value` tokens from the system irreversibly on behalf of `_from`.
-   *
-   * @param _from the address of the sender
-   * @param _value the amount of money to burn
-   */
-  function burnFrom(address _from, uint256 _value) public returns (bool success) {
-    require(balances[_from] >= _value);                // Check if the targeted balance is enough
-    require(_value <= allowed[_from][msg.sender]);     // Check allowance
-    balances[_from] -= _value;                         // Subtract from the targeted balance
-    allowed[_from][msg.sender] -= _value;              // Subtract from the sender's allowance
-    totalSupply -= _value;                      // Update totalSupply
-    outstandingQuarters -= _value;              // Update outstanding quarters
-    emit Burn(_from, _value);
-
-    // log rate change
-    emit BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, address(this).balance, totalSupply);
-    return true;
   }
 
   /**
