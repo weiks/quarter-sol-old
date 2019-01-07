@@ -182,43 +182,43 @@ contract("Quarters", function(accounts) {
 
     it("should not allow others to change eth price", async function() {
       assertRevert(
-        contract.setDeveloperStatus(accounts[6], true, { from: accounts[1] })
+        contract.setApprovedStatus(accounts[6], true, { from: accounts[1] })
       );
       assertRevert(
-        contract.setDeveloperStatus(accounts[7], true, { from: accounts[2] })
+        contract.setApprovedStatus(accounts[7], true, { from: accounts[2] })
       );
     });
 
     it("should allow only owner to change developer status", async function() {
       // let's take accounts 6,7 & 8 as developers
-      let isDeveloper = await contract.developers(accounts[6]);
+      let isDeveloper = await contract.approved(accounts[6]);
       assert.equal(isDeveloper, false);
 
-      isDeveloper = await contract.developers(accounts[7]);
+      isDeveloper = await contract.approved(accounts[7]);
       assert.equal(isDeveloper, false);
 
       // add accounts[6] as developer
-      let receipt = await contract.setDeveloperStatus(accounts[6], true, {
+      let receipt = await contract.setApprovedStatus(accounts[6], true, {
         from: accounts[0]
       });
       assert.equal(receipt.logs.length, 1);
       let log = receipt.logs[0];
-      assert.equal(log.event, "DeveloperStatusChanged");
-      assert.equal(log.args.developer, accounts[6]);
+      assert.equal(log.event, "ApprovedStatusChanged");
+      assert.equal(log.args._address, accounts[6]);
       assert.equal(log.args.status, true);
-      isDeveloper = await contract.developers(accounts[6]);
+      isDeveloper = await contract.approved(accounts[6]);
       assert.equal(isDeveloper, true);
 
       // add accounts[7] as developer
-      receipt = await contract.setDeveloperStatus(accounts[7], true, {
+      receipt = await contract.setApprovedStatus(accounts[7], true, {
         from: accounts[0]
       });
       assert.equal(receipt.logs.length, 1);
       log = receipt.logs[0];
-      assert.equal(log.event, "DeveloperStatusChanged");
-      assert.equal(log.args.developer, accounts[7]);
+      assert.equal(log.event, "ApprovedStatusChanged");
+      assert.equal(log.args._address, accounts[7]);
       assert.equal(log.args.status, true);
-      isDeveloper = await contract.developers(accounts[7]);
+      isDeveloper = await contract.approved(accounts[7]);
       assert.equal(isDeveloper, true);
     });
   });
@@ -445,7 +445,7 @@ contract("Quarters", function(accounts) {
 
     it("should not allow developer to withdraw with no balance", async function() {
       // make accounts[6] developer
-      await contract.setDeveloperStatus(accounts[6], true, {
+      await contract.setApprovedStatus(accounts[6], true, {
         from: accounts[0]
       });
 

@@ -4,7 +4,7 @@
   "main": "truffle.js",
   "private": "true",
   "scripts": {
-    "testrpc": "yarn run ganache-cli --gaslimit 150000000",
+    "testrpc": "yarn run ganache-cli --gasLimit 150000000",
     "test": "yarn run truffle test",
     "truffle": "truffle"
   },
