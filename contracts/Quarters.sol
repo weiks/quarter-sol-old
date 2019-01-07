@@ -76,8 +76,9 @@ contract Quarters is Ownable, RestrictedStandardToken {
   function setEthRate (uint16 rate) onlyOwner public {
     // Ether price is set in Wei
     require(rate > 0);
+    uint16 oldRate = ethRate;
     ethRate = rate;
-    emit EthRateChanged(ethRate, rate);
+    emit EthRateChanged(oldRate, ethRate);
   }
 
   /**
