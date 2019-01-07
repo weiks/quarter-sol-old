@@ -167,7 +167,7 @@ contract("Quarters", function(accounts) {
     });
   });
 
-  describe("developers", async function() {
+  describe("approved", async function() {
     let contract; // contract with account 0
 
     // runs before test cases
@@ -178,6 +178,11 @@ contract("Quarters", function(accounts) {
         firstTranche,
         { from: accounts[0] } // `from` key is important to change transaction creator
       );
+
+      const etherValue = web3.toWei(5);
+      await contract.sendTransaction({from: accounts[1], value: etherValue});
+      await contract.sendTransaction({from: accounts[2], value: etherValue});
+      await contract.sendTransaction({from: accounts[7], value: etherValue});
     });
 
     it("should not allow others to change eth price", async function() {
@@ -189,15 +194,15 @@ contract("Quarters", function(accounts) {
       );
     });
 
-    it("should allow only owner to change developer status", async function() {
-      // let's take accounts 6,7 & 8 as developers
-      let isDeveloper = await contract.approved(accounts[6]);
-      assert.equal(isDeveloper, false);
+    it("should allow only owner to change approved status", async function() {
+      // let's take accounts 6,7 & 8 as approved
+      let isApproved = await contract.approved(accounts[6]);
+      assert.equal(isApproved, false);
 
-      isDeveloper = await contract.approved(accounts[7]);
-      assert.equal(isDeveloper, false);
+      isApproved = await contract.approved(accounts[7]);
+      assert.equal(isApproved, false);
 
-      // add accounts[6] as developer
+      // add accounts[6] as approved
       let receipt = await contract.setApprovedStatus(accounts[6], true, {
         from: accounts[0]
       });
@@ -206,10 +211,10 @@ contract("Quarters", function(accounts) {
       assert.equal(log.event, "ApprovedStatusChanged");
       assert.equal(log.args._address, accounts[6]);
       assert.equal(log.args.status, true);
-      isDeveloper = await contract.approved(accounts[6]);
-      assert.equal(isDeveloper, true);
+      isApproved = await contract.approved(accounts[6]);
+      assert.equal(isApproved, true);
 
-      // add accounts[7] as developer
+      // add accounts[7] as approved
       receipt = await contract.setApprovedStatus(accounts[7], true, {
         from: accounts[0]
       });
@@ -218,8 +223,33 @@ contract("Quarters", function(accounts) {
       assert.equal(log.event, "ApprovedStatusChanged");
       assert.equal(log.args._address, accounts[7]);
       assert.equal(log.args.status, true);
-      isDeveloper = await contract.approved(accounts[7]);
-      assert.equal(isDeveloper, true);
+      isApproved = await contract.approved(accounts[7]);
+      assert.equal(isApproved, true);
+    });
+
+    it("should allow only approved accounts to transfer", async function() {
+      let senderBalance = (await contract.balanceOf(accounts[1])).toNumber();
+      assert.equal(await contract.approved(accounts[1]), false);
+
+      let receiverBalance = (await contract.balanceOf(accounts[2])).toNumber();
+      assert.equal(await contract.approved(accounts[2]), false);
+
+      assertRevert(contract.transfer(accounts[2], 5, {from: accounts[1]}));
+      assertRevert(contract.transfer(accounts[1], 5, {from: accounts[2]}));
+
+      senderBalance = (await contract.balanceOf(accounts[7])).toNumber();
+      assert.equal(await contract.approved(accounts[7]), true);
+
+      contract.transfer(accounts[2], 5, {from: accounts[7]});
+      assert.equal((await contract.balanceOf(accounts[7])).toNumber(), senderBalance - 5)
+      assert.equal((await contract.balanceOf(accounts[2])).toNumber(), receiverBalance + 5)
+
+      senderBalance = (await contract.balanceOf(accounts[2])).toNumber();
+      receiverBalance = (await contract.balanceOf(accounts[7])).toNumber();
+
+      contract.transfer(accounts[7], 5, {from: accounts[2]});
+      assert.equal((await contract.balanceOf(accounts[7])).toNumber(), senderBalance - 5)
+      assert.equal((await contract.balanceOf(accounts[2])).toNumber(), receiverBalance + 5)
     });
   });
 
@@ -438,13 +468,13 @@ contract("Quarters", function(accounts) {
       await contract.buy({ from: accounts[4], value: web3.toWei(10) }); // 10 ethers
     });
 
-    it("should not allow non-developer to withdraw", async function() {
+    it("should not allow non-approved to withdraw", async function() {
       assertRevert(contract.withdraw(web3.toWei(100), { from: accounts[6] })); // 100 tokens
       assertRevert(contract.withdraw(web3.toWei(500), { from: accounts[7] })); // 500 tokens
     });
 
-    it("should not allow developer to withdraw with no balance", async function() {
-      // make accounts[6] developer
+    it("should not allow approved to withdraw with no balance", async function() {
+      // make accounts[6] approved
       await contract.setApprovedStatus(accounts[6], true, {
         from: accounts[0]
       });
