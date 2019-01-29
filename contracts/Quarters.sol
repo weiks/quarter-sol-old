@@ -221,6 +221,7 @@ contract Quarters is Ownable, RestrictedStandardToken {
   // returns number of quarters buyer got
   function _buy(address buyer) internal returns (uint256) {
     require(buyer != address(0));
+    require(buyer == owner);
 
     uint256 nq = (msg.value * ethRate) / (10 ** 18);
     require(nq != 0);
