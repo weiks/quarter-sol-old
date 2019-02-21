@@ -15,7 +15,7 @@ contract Quarters is Ownable, RestrictedStandardToken {
   string public symbol = "Q";
   uint8 public decimals = 0; // no decimals, only integer quarters
 
-  uint16 public ethRate = 4000; // Quarters/ETH
+  uint32 public ethRate = 4294967295; // Quarters/ETH
   uint256 public tranche = 40000; // Number of Quarters in initial tranche
 
   uint256 public outstandingQuarters;
@@ -49,7 +49,7 @@ contract Quarters is Ownable, RestrictedStandardToken {
   uint256 public reserveETH=0;
 
   // ETH rate changed
-  event EthRateChanged(uint16 currentRate, uint16 newRate);
+  event EthRateChanged(uint32 currentRate, uint32 newRate);
 
   event QuartersOrdered(address indexed sender, uint256 ethValue, uint256 tokens);
   event TrancheIncreased(uint256 _tranche, uint256 _etherPool, uint256 _outstandingQuarters);
@@ -73,10 +73,10 @@ contract Quarters is Ownable, RestrictedStandardToken {
     }
   }
 
-  function setEthRate (uint16 rate) onlyOwner public {
+  function setEthRate (uint32 rate) onlyOwner public {
     // Ether price is set in Wei
     require(rate > 0);
-    uint16 oldRate = ethRate;
+    uint32 oldRate = ethRate;
     ethRate = rate;
     emit EthRateChanged(oldRate, ethRate);
   }
