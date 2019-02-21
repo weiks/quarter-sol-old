@@ -192,9 +192,7 @@ contract Quarters is Ownable, RestrictedStandardToken {
   /**
    * Buy quarters by sending ethers to contract address (no data required)
    */
-  function () payable public {
-    _buy(msg.sender);
-  }
+  function () payable public {}
 
   function buy() payable public {
     _buy(msg.sender);
