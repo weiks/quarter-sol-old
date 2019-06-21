@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.2;
 
 /*
 - Parent contract interface for adding custom logic before calling the 'transfer' function
@@ -12,10 +12,10 @@ while mapping new token in rootchain
 */
 
 interface IParentToken {
-  function beforeTransfer(address sender, address to, uint256 value) public returns(bool);
+  function beforeTransfer(address sender, address to, uint256 value) external returns(bool);
 }
 
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.2;
 
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
@@ -25,7 +25,7 @@ contract ParentTokenMock is IParentToken, Ownable {
 
   mapping (address => bool) isAllowed;
 
-  function beforeTransfer(address sender, address to, uint256 value) public returns(bool) {
+  function beforeTransfer(address sender, address to, uint256 value) external returns(bool) {
     return isAllowed[sender] || isAllowed[to];
   }
 
