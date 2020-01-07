@@ -23,7 +23,9 @@ import "./IParentToken.sol";
 
 contract ParentTokenMock is IParentToken, Ownable {
 
-  mapping (address => bool) isAllowed;
+  mapping (address => bool) public isAllowed;
+
+  event WhitelistChanged(address user, bool allowed);
 
   function beforeTransfer(address sender, address to, uint256 value) external returns(bool) {
     return isAllowed[sender] || isAllowed[to];
@@ -32,5 +34,6 @@ contract ParentTokenMock is IParentToken, Ownable {
   function updatePermission(address user, bool allowed) public onlyOwner {
     require(user != address(0x0));
     isAllowed[user] = allowed;
+    emit WhitelistChanged(user, allowed);
   }
 }
