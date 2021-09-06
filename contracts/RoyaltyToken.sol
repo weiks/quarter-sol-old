@@ -10,6 +10,7 @@ contract RoyaltyToken is StandardToken {
   using SafeMath for uint256;
   // restricted addresses	
   mapping(address => bool) public restrictedAddresses;
+   ERC20 public kusdt = ERC20(0xa913AD11b3BF41bC3D77Cbb9Ca1157E488ff66f9);
   
   event RestrictedStatusChanged(address indexed _address, bool status);
 
@@ -85,15 +86,19 @@ contract RoyaltyToken is StandardToken {
     return super.transferFrom(_from, _to, _value);
   }
 
+  /**
+  for now i am withdrawing royalty whoever click withdraw
+   */ 
   function withdrawRoyalty() public {
-    updateAccount(msg.sender);
+      kusdt.transfer(msg.sender,kusdt.balanceOf(address(this)));
+    // updateAccount(msg.sender);
 
-    // retrieve Royalty amount
-    uint256 RoyaltyAmount = accounts[msg.sender].balance;
-    require(RoyaltyAmount > 0);
-    accounts[msg.sender].balance = 0;
+    // // retrieve Royalty amount
+    // uint256 RoyaltyAmount = accounts[msg.sender].balance;
+    // require(RoyaltyAmount > 0);
+    // accounts[msg.sender].balance = 0;
 
-    // transfer Royalty amount
-    msg.sender.transfer(RoyaltyAmount);
+    // // transfer Royalty amount
+    // msg.sender.transfer(RoyaltyAmount);
   }
 }

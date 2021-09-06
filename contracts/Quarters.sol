@@ -14,6 +14,8 @@ contract Quarters is Ownable, StandardToken {
   string public name = "Quarters";
   string public symbol = "Q";
   uint8 public decimals = 0; // no decimals, only integer quarters
+  
+  using SafeMath for uint256;
 
   uint16 public ethRate = 4000; // Quarters/ETH
   uint256 public tranche = 40000; // Number of Quarters in initial tranche
@@ -24,6 +26,11 @@ contract Quarters is Ownable, StandardToken {
 
   uint256 public outstandingQuarters;
   address public q2;
+  
+  /**
+  Royalties token 
+   */
+  ERC20 public kusdt = ERC20(0xa913AD11b3BF41bC3D77Cbb9Ca1157E488ff66f9);
 
   // number of Quarters for next tranche
   uint8 public trancheNumerator = 2;
@@ -254,20 +261,14 @@ contract Quarters is Ownable, StandardToken {
   /**
    * Buy quarters by sending ethers to contract address (no data required)
    */
-  function () payable public {
-    _buy(msg.sender);
+
+  function buy(uint256 amount) public {
+     require(kusdt.balanceOf(msg.sender)>=amount,"insufficient funds"); 
+    _buy(msg.sender,amount);
   }
 
-  function buy() payable public {
-    _buy(msg.sender);
-  }
-
-  function buyFor(address buyer) payable public {
-    uint256 _value =  _buy(buyer);
-
-    // allow donor (msg.sender) to spend buyer's tokens
-    allowed[buyer][msg.sender] += _value;
-    emit Approval(buyer, msg.sender, _value);
+  function buyFor(address buyer,uint256 amount) payable public {
+    uint256 _value =  _buy(buyer,amount);
   }
 
   function _changeTrancheIfNeeded() internal {
@@ -279,12 +280,13 @@ contract Quarters is Ownable, StandardToken {
       emit TrancheIncreased(tranche, address(this).balance, outstandingQuarters);
     }
   }
-
+  
   // returns number of quarters buyer got
-  function _buy(address buyer) internal returns (uint256) {
+  function _buy(address buyer,uint256 amount) internal returns (uint256) {
     require(buyer != address(0));
-
-    uint256 nq = (msg.value * ethRate) / (10 ** 18);
+    
+    kusdt.transferFrom(msg.sender,address(this),amount);
+    uint256 nq = amount / (10 ** 6);
     require(nq != 0);
     if (nq > tranche) {
       nq = tranche;
@@ -305,7 +307,7 @@ contract Quarters is Ownable, StandardToken {
     emit BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, address(this).balance, totalSupply);
 
     // transfer owner's cut
-    Q2(q2).disburse.value(msg.value * 15 / 100)();
+    kusdt.transfer(q2,amount.mul(15).div(100));
 
     // return nq
     return nq;
