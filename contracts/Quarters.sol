@@ -26,6 +26,8 @@ contract Quarters is Ownable, StandardToken {
 
   uint256 public outstandingQuarters;
   address public q2;
+
+  uint32 private royaltyPercentage = 15;
  
   // token used to buy quarters 
   ERC20 public kusdt = ERC20(0xcee8faf64bb97a73bb51e115aa89c17ffa8dd167);
@@ -282,6 +284,12 @@ contract Quarters is Ownable, StandardToken {
       emit TrancheIncreased(tranche, address(this).balance, outstandingQuarters);
     }
   }
+
+  // change royalties percent only owner 
+  function changeRoyaltiesPercentage(uint32 percent) onlyOwner public
+  {
+    royaltyPercentage = percent;
+  }
   
 
   // returns number of quarters buyer got
@@ -309,7 +317,7 @@ contract Quarters is Ownable, StandardToken {
     // log rate change
     emit BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, address(this).balance, totalSupply);
 
-    uint256 royaltyAmount = amount.mul(15).div(100);
+    uint256 royaltyAmount = amount.mul(royaltyPercentage).div(100);
     // transfer owner's cut
     kusdt.transfer(q2,royaltyAmount);
     
