@@ -26,11 +26,9 @@ contract Quarters is Ownable, StandardToken {
 
   uint256 public outstandingQuarters;
   address public q2;
-  
-  /**
-  Royalties token 
-   */
-  ERC20 public kusdt = ERC20(0xa913AD11b3BF41bC3D77Cbb9Ca1157E488ff66f9);
+ 
+  // token used to buy quarters 
+  ERC20 public kusdt = ERC20(0xcee8faf64bb97a73bb51e115aa89c17ffa8dd167);
 
   // number of Quarters for next tranche
   uint8 public trancheNumerator = 2;
@@ -268,7 +266,11 @@ contract Quarters is Ownable, StandardToken {
   }
 
   function buyFor(address buyer,uint256 amount) payable public {
+    require(kusdt.balanceOf(msg.sender)>=amount,"insufficient funds");
     uint256 _value =  _buy(buyer,amount);
+
+    // allow donor (msg.sender) to spend buyer's toke
+    emit Approval(buyer, msg.sender, _value);
   }
 
   function _changeTrancheIfNeeded() internal {
@@ -281,6 +283,7 @@ contract Quarters is Ownable, StandardToken {
     }
   }
   
+
   // returns number of quarters buyer got
   function _buy(address buyer,uint256 amount) internal returns (uint256) {
     require(buyer != address(0));
@@ -306,8 +309,11 @@ contract Quarters is Ownable, StandardToken {
     // log rate change
     emit BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, address(this).balance, totalSupply);
 
+    uint256 royaltyAmount = amount.mul(15).div(100);
     // transfer owner's cut
-    kusdt.transfer(q2,amount.mul(15).div(100));
+    kusdt.transfer(q2,royaltyAmount);
+    
+    Q2(q2).disburse(royaltyAmount);
 
     // return nq
     return nq;
