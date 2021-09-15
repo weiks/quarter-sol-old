@@ -3,11 +3,11 @@ pragma solidity ^0.4.18;
 import './Ownable.sol';
 import './StandardToken.sol';
 
-interface TokenRecipient {
+interface MaticTokenRecipient {
   function receiveApproval(address _from, uint256 _value, address _token, bytes _extraData) external;
 }
 
-contract Quarters is Ownable, StandardToken {
+contract MaticQuarters is Ownable, StandardToken {
   // Public variables of the token
   string public name = "Quarters";
   string public symbol = "Q";
@@ -61,7 +61,7 @@ contract Quarters is Ownable, StandardToken {
   function approveAndCall(address _spender, uint256 _value, bytes _extraData)
   public
   returns (bool success) {
-    TokenRecipient spender = TokenRecipient(_spender);
+    MaticTokenRecipient spender = MaticTokenRecipient(_spender);
     if (approve(_spender, _value)) {
       spender.receiveApproval(msg.sender, _value, this, _extraData);
       return true;
@@ -93,3 +93,4 @@ contract Quarters is Ownable, StandardToken {
 
     return false;
   }
+}

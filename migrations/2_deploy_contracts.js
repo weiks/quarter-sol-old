@@ -1,20 +1,12 @@
 var Quarters = artifacts.require('./Quarters.sol')
 var Q2 = artifacts.require('./Q2.sol')
 
-module.exports = function(deployer) {
-  deployer.deploy(Quarters, '4000', '100000')
-  deployer.deploy(Q2, web3.eth.accounts[0]).then(async () => {
-    const q2 = await Q2.deployed()
-    await q2.startStage(
-      1000,
-      web3.toWei(10000),
-      web3.eth.blockNumber + 2,
-      web3.eth.blockNumber + 5
-    )
-    await q2.buyTokens({value: web3.toWei(1)})
-    await q2.buyTokens({value: web3.toWei(1)})
-    await q2.buyTokens({value: web3.toWei(1)})
-    await q2.disburse({value: web3.toWei(1)})
-    // await q2.updateAccount()
-  })
+module.exports = async function(deployer) {
+  let quartersAddress= null;
+   await deployer.deploy(Q2,'0x8da17Bd0DFd4834E1c17819aDC3D392526c60C66').then(async (receipt)=>{
+    await deployer.deploy(Quarters,receipt.address,1000000).then((rec)=>{
+      quartersAddress= rec.address;
+     })
+   });
+   console.log(quartersAddress);
 }

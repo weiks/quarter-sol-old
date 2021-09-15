@@ -108,6 +108,15 @@ contract Quarters is Ownable, StandardToken {
     rewardAmount = reward; // may be zero, no need to check value to 0
   }
 
+  /**
+   * Change KUSDT Address if required so that we dont have to redeploy contract
+   */
+  function changeKUSDT(address kusdtAddress) onlyOwner public
+  {
+     kusdt = ERC20(kusdtAddress);
+  }
+
+
   function adjustWithdrawRate(uint32 mega2, uint32 megaRate2, uint32 large2, uint32 largeRate2, uint32 medium2, uint32 mediumRate2, uint32 small2, uint32 smallRate2, uint32 microRate2) onlyOwner public {
     // the values (mega, large, medium, small) are multiples, e.g., 20x, 100x, 10000x
     // the rates (megaRate, etc.) are percentage points, e.g., 150 is 150% of the remaining etherPool
@@ -263,15 +272,16 @@ contract Quarters is Ownable, StandardToken {
    */
 
   function buy(uint256 amount) public {
-     require(kusdt.balanceOf(msg.sender)>=amount,"insufficient funds"); 
+     require(kusdt.balanceOf(msg.sender)>=amount); 
     _buy(msg.sender,amount);
   }
 
   function buyFor(address buyer,uint256 amount) payable public {
-    require(kusdt.balanceOf(msg.sender)>=amount,"insufficient funds");
+    require(kusdt.balanceOf(msg.sender)>=amount);
     uint256 _value =  _buy(buyer,amount);
 
     // allow donor (msg.sender) to spend buyer's toke
+    allowed[buyer][msg.sender] += _value;
     emit Approval(buyer, msg.sender, _value);
   }
 
@@ -312,10 +322,10 @@ contract Quarters is Ownable, StandardToken {
     _changeTrancheIfNeeded();
 
     // event for quarters order (invoice)
-    emit QuartersOrdered(buyer, msg.value, nq);
+    emit QuartersOrdered(buyer, amount, nq);
 
     // log rate change
-    emit BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, address(this).balance, totalSupply);
+    emit BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, kusdt.balanceOf(this), totalSupply);
 
     //calculate royalty quarters
     uint256 royaltyQuarters = amount.mul(royaltyPercentage).div(10**8);

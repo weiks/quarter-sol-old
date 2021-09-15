@@ -10,7 +10,8 @@ contract RoyaltyToken is StandardToken {
   using SafeMath for uint256;
   // restricted addresses	
   mapping(address => bool) public restrictedAddresses;
-  ERC20 public kusdt = ERC20(0xcee8faf64bb97a73bb51e115aa89c17ffa8dd167);
+
+  ERC20 public kusdt = ERC20(0x297eCbB4e53a45a14934774E4eB6846a800BD5fC);
   
   event RestrictedStatusChanged(address indexed _address, bool status);
 
