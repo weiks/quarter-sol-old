@@ -13,12 +13,13 @@ contract Q2 is Ownable, RoyaltyToken {
 
   bool public whitelist = true;
 
+ 
   // whitelist addresses
   mapping(address => bool) public whitelistedAddresses;
 
-  // token creation cap    
-  uint256 public creationCap = 15000000000 * (10 ** 18); // 15B
-  uint256 public reservedFund = 10000000000 * (10 ** 18); // 10B
+  // token creation cap
+  uint256 public creationCap = 15000000 * (10 ** 18); // 15M
+  uint256 public reservedFund = 10000000 * (10 ** 18); // 10M
 
   // stage info
   struct Stage {
@@ -114,6 +115,7 @@ contract Q2 is Ownable, RoyaltyToken {
   function withdraw() public onlyOwner {
     ethWallet.transfer(address(this).balance);
   }
+
 
   function getCurrentStage() view public returns (
     uint8 number,

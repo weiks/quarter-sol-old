@@ -4,12 +4,13 @@ import './Ownable.sol';
 import './StandardToken.sol';
 import './Q2.sol';
 import './MigrationTarget.sol';
+import './IQuarters.sol';
 
 interface TokenRecipient {
   function receiveApproval(address _from, uint256 _value, address _token, bytes _extraData) external;
 }
 
-contract Quarters is Ownable, StandardToken {
+contract Quarters is Ownable, StandardToken,IQuarters {
   // Public variables of the token
   string public name = "Quarters";
   string public symbol = "Q";
@@ -17,12 +18,10 @@ contract Quarters is Ownable, StandardToken {
   
   using SafeMath for uint256;
 
-  uint16 public ethRate = 4000; // Quarters/ETH
+  uint16 public kusdtRate = 571; // Quarters/KUSDT
   uint256 public tranche = 40000; // Number of Quarters in initial tranche
 
-  // List of developers
-  // address -> status
-  mapping (address => bool) public developers;
+  
 
   uint256 public outstandingQuarters;
   address public q2;
@@ -30,7 +29,7 @@ contract Quarters is Ownable, StandardToken {
   uint32 private royaltyPercentage = 15;
  
   // token used to buy quarters 
-  ERC20 public kusdt = ERC20(0x297eCbB4e53a45a14934774E4eB6846a800BD5fC);
+  ERC20 public kusdt = ERC20(0x0d1531279A238c513bCe792F5bAcb782336B0C5a);
 
   // number of Quarters for next tranche
   uint8 public trancheNumerator = 2;
@@ -59,8 +58,8 @@ contract Quarters is Ownable, StandardToken {
   // reserve ETH from Q2 to fund rewards
   uint256 public reserveETH=0;
 
-  // ETH rate changed
-  event EthRateChanged(uint16 currentRate, uint16 newRate);
+  // KUSDT rate changed
+  event KUSDTRateChanged(uint16 currentRate, uint16 newRate);
 
   // This notifies clients about the amount burnt
   event Burn(address indexed from, uint256 value);
@@ -69,17 +68,10 @@ contract Quarters is Ownable, StandardToken {
   event DeveloperStatusChanged(address indexed developer, bool status);
   event TrancheIncreased(uint256 _tranche, uint256 _etherPool, uint256 _outstandingQuarters);
   event MegaEarnings(address indexed developer, uint256 value, uint256 _baseRate, uint256 _tranche, uint256 _outstandingQuarters, uint256 _etherPool);
-  event Withdraw(address indexed developer, uint256 value, uint256 _baseRate, uint256 _tranche, uint256 _outstandingQuarters, uint256 _etherPool);
+  event Withdraw(address indexed developer, uint256 value, uint256 _tranche, uint256 _outstandingQuarters, uint256 _etherPool);
   event BaseRateChanged(uint256 _baseRate, uint256 _tranche, uint256 _outstandingQuarters, uint256 _etherPool,  uint256 _totalSupply);
   event Reward(address indexed _address, uint256 value, uint256 _outstandingQuarters, uint256 _totalSupply);
 
-  /**
-   * developer modifier
-   */
-  modifier onlyActiveDeveloper() {
-    require(developers[msg.sender] == true);
-    _;
-  }
 
   /**
    * Constructor function
@@ -94,11 +86,11 @@ contract Quarters is Ownable, StandardToken {
     tranche = firstTranche; // number of Quarters to be sold before increasing price
   }
 
-  function setEthRate (uint16 rate) onlyOwner public {
+  function setKusdtRate (uint16 rate) onlyOwner public {
     // Ether price is set in Wei
     require(rate > 0);
-    ethRate = rate;
-    emit EthRateChanged(ethRate, rate);
+    kusdtRate = rate;
+    emit KUSDTRateChanged(kusdtRate, rate);
   }
 
   /**
@@ -182,7 +174,7 @@ contract Quarters is Ownable, StandardToken {
       totalSupply += _reward;
       outstandingQuarters += _reward;
 
-      uint256 spentETH = (_reward * (10 ** 18)) / ethRate;
+      uint256 spentETH = (_reward * (10 ** 18)) / kusdtRate;
       if (reserveETH >= spentETH) {
           reserveETH -= spentETH;
         } else {
@@ -307,7 +299,7 @@ contract Quarters is Ownable, StandardToken {
     require(buyer != address(0));
     
     kusdt.transferFrom(msg.sender,address(this),amount);
-    uint256 nq = amount / (10 ** 6);
+    uint256 nq = amount.mul(kusdtRate).div(10**6);
     require(nq != 0);
     if (nq > tranche) {
       nq = tranche;
@@ -328,8 +320,9 @@ contract Quarters is Ownable, StandardToken {
     emit BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, kusdt.balanceOf(this), totalSupply);
 
     //calculate royalty quarters
-    uint256 royaltyQuarters = amount.mul(royaltyPercentage).div(10**8);
+    uint256 royaltyQuarters = amount.mul(royaltyPercentage).mul(kusdtRate).div(10**8);
     balances[q2] += royaltyQuarters;
+    Q2(q2).disburse(royaltyQuarters);
     
     totalSupply = totalSupply + nq + royaltyQuarters;
     outstandingQuarters = outstandingQuarters + nq + royaltyQuarters;
@@ -364,34 +357,21 @@ contract Quarters is Ownable, StandardToken {
   function withdraw(uint256 value) onlyActiveDeveloper public {
     require(balances[msg.sender] >= value);
 
-    uint256 baseRate = getBaseRate();
-    require(baseRate > 0); // check if base rate > 0
-
-    uint256 earnings = value * baseRate;
-    uint256 rate = getRate(value); // get rate from value and tranche
-    uint256 earningsWithBonus = (rate * earnings) / 100;
-    if (earningsWithBonus > address(this).balance) {
-      earnings = address(this).balance;
-    } else {
-      earnings = earningsWithBonus;
-    }
+   uint256 earnings =  kusdt.balanceOf(this).mul(value).div(totalSupply);
 
     balances[msg.sender] -= value;
     outstandingQuarters -= value; // update the outstanding Quarters
 
-    uint256 etherPool = address(this).balance - earnings;
-    if (rate == megaRate) {
-      emit MegaEarnings(msg.sender, earnings, baseRate, tranche, outstandingQuarters, etherPool); // with current base rate
-    }
+    uint256 etherPool = kusdt.balanceOf(this) - earnings;
 
     // event for withdraw
-    emit Withdraw(msg.sender, earnings, baseRate, tranche, outstandingQuarters, etherPool);  // with current base rate
+    emit Withdraw(msg.sender, earnings, tranche, outstandingQuarters, etherPool);  // with current base rate
 
     // log rate change
     emit BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, address(this).balance, totalSupply);
 
     // earning for developers
-    msg.sender.transfer(earnings);  
+    kusdt.transfer(msg.sender, earnings);  
 }
 
   function disburse() public payable {

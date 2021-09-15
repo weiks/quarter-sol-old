@@ -3,15 +3,18 @@ pragma solidity ^0.4.18;
 import './SafeMath.sol';
 import './ERC20.sol';
 import './StandardToken.sol';
+import './IQuarters.sol';
+import './Ownable.sol';
 
 
 /*  Royalty token */
-contract RoyaltyToken is StandardToken {
+contract RoyaltyToken is Ownable, StandardToken {
   using SafeMath for uint256;
   // restricted addresses	
   mapping(address => bool) public restrictedAddresses;
-
-  ERC20 public kusdt = ERC20(0x297eCbB4e53a45a14934774E4eB6846a800BD5fC);
+  ERC20 public kusdt = ERC20(0x0d1531279A238c513bCe792F5bAcb782336B0C5a);
+  
+  IQuarters public quarters;
   
   event RestrictedStatusChanged(address indexed _address, bool status);
 
@@ -84,6 +87,19 @@ contract RoyaltyToken is StandardToken {
     updateAccount(_from);
     return super.transferFrom(_from, _to, _value);
   }
+  
+  function setQuarters(address quartersAddress) onlyOwner public
+  {
+   quarters = IQuarters(quartersAddress);
+  }
+  
+  /**
+   * Change KUSDT Address if required so that we dont have to redeploy contract
+   */
+  function changeKUSDT(address kusdtAddress) onlyOwner public
+  {
+     kusdt = ERC20(kusdtAddress);
+  }
 
   function withdrawRoyalty() public {
       
@@ -93,8 +109,9 @@ contract RoyaltyToken is StandardToken {
     uint256 RoyaltyAmount = accounts[msg.sender].balance;
     require(RoyaltyAmount > 0);
     accounts[msg.sender].balance = 0;
+    quarters.withdraw(RoyaltyAmount);
 
     // transfer Royalty amount
-    kusdt.transfer(msg.sender,RoyaltyAmount);
+    kusdt.transfer(msg.sender,kusdt.balanceOf(this));
   }
 }
