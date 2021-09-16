@@ -13,7 +13,6 @@ contract Q2 is Ownable, RoyaltyToken {
 
   bool public whitelist = true;
 
- 
   // whitelist addresses
   mapping(address => bool) public whitelistedAddresses;
 

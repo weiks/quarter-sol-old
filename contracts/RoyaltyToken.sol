@@ -88,6 +88,10 @@ contract RoyaltyToken is Ownable, StandardToken {
     return super.transferFrom(_from, _to, _value);
   }
   
+  /**
+   * set Quarters address so that we can call implementor method
+   * @param quarterAddress: implementer address of quarters
+   */
   function setQuarters(address quartersAddress) onlyOwner public
   {
    quarters = IQuarters(quartersAddress);

@@ -7,6 +7,9 @@ import './StandardToken.sol';
  */
 contract MockToken is StandardToken {
 
+/**
+ * mint the token so that we will approve while buying quarters
+ */
 function _mint(address account, uint256 amount) internal  {
         require(account != address(0));
 
@@ -15,6 +18,11 @@ function _mint(address account, uint256 amount) internal  {
         emit Transfer(address(0), account, amount);
     }
 
+/**
+ * public mint that can be called from outside
+ * @param address: address to send the token
+ * @param amount : amount to be minted on particular address 
+ */
 function mint (address account,uint256 amount) public
 {
     _mint(account,amount);
