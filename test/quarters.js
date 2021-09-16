@@ -225,71 +225,130 @@ contract("Quarters", function(accounts) {
 
     });
     
-      it("should get equivalent tokens for usdt", async function() {
-
-        console.log(usdt.address);
-        console.log(q2.address);
-        console.log(contract.address);
+      it("should get quarters based on usdt", async function() {
 
         let kusdtRate = (await contract.kusdtRate()).words[0];
-        console.log(kusdtRate);
         let royaltyPercentage = 15;
         
         //changing address of erc20
         contract.changeKUSDT(usdt.address,{from:accounts[0]});
 
         //mint usdt to buy quarters
-       let receipt = await usdt.mint(accounts[0],100000000000,{from:accounts[0]});
+       let receipt = await usdt.mint(accounts[0],1000000,{from:accounts[0]});
        assert.equal(receipt.logs[0].event, "Transfer");
-       console.log(await usdt.balanceOf(accounts[1]));
-       console.log(await usdt.balanceOf(accounts[0]));
-       console.log(await usdt.totalSupply());
-      // assert.equal((await usdt.balanceOf(accounts[0])).words[0],100000000000);
+       assert.equal((await usdt.balanceOf(accounts[0])).words[0],1000000);
 
         //approving to spend usdt to contract in behalf of user
-        receipt = await usdt.approve(contract.address,100000000000,{from:accounts[0]});
+        receipt = await usdt.approve(contract.address,1000000,{from:accounts[0]});
         assert.equal(receipt.logs[0].event, "Approval");
-        //receipt = await usdt.allowance(accounts[0],contract.address);
-        //console.log(receipt);
-        //assert(receipt.words[0],100000000000);
+        receipt = await usdt.allowance(accounts[0],contract.address);
+        assert(receipt.words[0],1000000);
 
         //quarters ordered and contract will spend usdt in behalf of user
-        receipt= await contract.buy(100000000000,{from:accounts[0]});
+        receipt= await contract.buy(1000000,{from:accounts[0]});
         assert.equal(receipt.logs.length, 3);
         let logs = receipt.logs;
         assert.equal(logs[0].event,'Transfer');
         assert.equal(logs[1].event,'QuartersOrdered');
-        console.log((await contract.totalSupply()).words[0]);
-        let account0Balance = await contract.balances(accounts[0]);
-        let expectedTotalSupply = ((100000000000*kusdtRate)/10e6)+(100000000000*kusdtRate*royaltyPercentage)/10e8;
-        console.log(expectedTotalSupply);
+        
+        //expected total supply 
+        let expectedTotalSupply = parseInt((10e6*kusdtRate)/10e6)+parseInt((10e6*kusdtRate*royaltyPercentage)/10e8);
         assert.equal((await contract.totalSupply()).words[0],expectedTotalSupply);
-        //console.log(account0Balance);
-        //assert.equal((await contract.balanceOf(accounts[0])).words[0],(100000000000*kusdtRate)/10e7);
+        assert.equal((await contract.balanceOf(accounts[0])).words[0],parseInt((10e6*kusdtRate)/10e6));
        });
 
-      it("should get equivalent tokens for usdt on buyer address", async function() {
+      it("should get quarters based on kusdtRate buy sending usdt on buyer address", async function() {
+
+        let kusdtRate = (await contract.kusdtRate()).words[0];
+
          //changing address of kusdt
         contract.changeKUSDT(usdt.address,{from:accounts[0]});
 
         //mint usdt to buy quarters
-        await usdt.mint(accounts[0],100000000000,{from:accounts[0]});
-        assert(await usdt.balanceOf(accounts[0]),100000000000);
+        await usdt.mint(accounts[0],1000000,{from:accounts[0]});
+        assert(await usdt.balanceOf(accounts[0]),1000000);
 
        //changing address of kusdt
-        await usdt.approve(contract.address,100000000000,{from:accounts[0]});
+        await usdt.approve(contract.address,1000000,{from:accounts[0]});
         let receipt = await usdt.allowance(accounts[0],contract.address);
-        assert(receipt.words[0],100000000000);
+        assert(receipt.words[0],1000000);
 
-        receipt= await contract.buyFor(accounts[1],100000000000,{from:accounts[0]});
-        assert.equal(receipt.logs.length, 5);
+        receipt= await contract.buyFor(accounts[1],1000000,{from:accounts[0]});
+        assert.equal(receipt.logs.length, 4);
         let logs = receipt.logs;
         assert.equal(logs[0].event,'Transfer');
-        assert.equal(logs[1].event,'TrancheIncreased');
-        //assert(await contract.balanceOf(accounts[1]),100000000000/10e6);
-
-        receipt = await contract.allowance(accounts[1],accounts[0]);
-        //assert(receipt.words[0],100000000000/10e6);
+        assert.equal(logs[1].event,'QuartersOrdered');
+        assert((await contract.balanceOf(accounts[1])).words[0],parseInt((10e6*kusdtRate)/10e6));
       });
+    });
+
+  describe("withdraw", async function() {
+      let contract; // contract with account 0
+      let q2;
+      let usdt;
+  
+      // runs before test cases
+      before(async function() {
+        usdt = await kusdt.new(accounts[0]);
+        q2 = await Q2.new(accounts[0]);
+        contract = await Quarters.new(
+          q2.address,
+          firstTranche,
+          { from: accounts[0] } // `from` key is important to change transaction creator
+        );
+  
+      });
+      
+        it("withdraw kusdt by burning quarters", async function() {
+  
+          let kusdtRate = (await contract.kusdtRate()).words[0];
+          let royaltyPercentage = 15;
+          
+          //changing address of erc20
+          contract.changeKUSDT(usdt.address,{from:accounts[0]});
+  
+          //mint usdt to buy quarters
+         let receipt = await usdt.mint(accounts[0],1000000,{from:accounts[0]});
+         assert.equal(receipt.logs[0].event, "Transfer");
+         assert.equal((await usdt.balanceOf(accounts[0])).words[0],1000000);
+  
+          //approving to spend usdt to contract in behalf of user
+          receipt = await usdt.approve(contract.address,1000000,{from:accounts[0]});
+          assert.equal(receipt.logs[0].event, "Approval");
+          receipt = await usdt.allowance(accounts[0],contract.address);
+          assert(receipt.words[0],1000000);
+  
+          //quarters ordered and contract will spend usdt in behalf of user
+          receipt= await contract.buy(1000000,{from:accounts[0]});
+          assert.equal(receipt.logs.length, 3);
+          let logs = receipt.logs;
+          assert.equal(logs[0].event,'Transfer');
+          assert.equal(logs[1].event,'QuartersOrdered');
+          
+          //expected total supply 
+          let expectedTotalSupply = parseInt((10e6*kusdtRate)/10e6)+parseInt((10e6*kusdtRate*royaltyPercentage)/10e8);
+          assert.equal((await contract.totalSupply()).words[0],expectedTotalSupply);
+          assert.equal((await contract.balanceOf(accounts[0])).words[0],parseInt((10e6*kusdtRate)/10e6));
+
+          //set as developer to 
+         receipt = await contract.setDeveloperStatus(accounts[0],true,{from:accounts[0]});
+         assert.equal(receipt.logs[0].event,'DeveloperStatusChanged');
+        receipt = await contract.withdraw(10);
+        assert.equal(receipt.logs[0].event,'Withdraw');
+        assert.equal(receipt.logs[1].event,'BaseRateChanged');
+        assert.equal(receipt.logs[2].event,'Transfer');
+
+        //set q2 as developer so that we can call withdraw method 
+        receipt = await contract.setDeveloperStatus(q2.address,true,{from:accounts[0]});
+        assert.equal(receipt.logs[0].event,'DeveloperStatusChanged');
+
+        //updating quarters on q2
+        await q2.setQuarters(contract.address,{from: accounts[0]});
+        await q2.changeKUSDT(usdt.address,{from:accounts[0]});
+
+        //withdraw royalties
+        receipt = await q2.withdrawRoyalty();
+        assert.equal(receipt.logs[0].event,'Transfer');
+        });
     });
 });

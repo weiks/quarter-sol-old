@@ -90,7 +90,7 @@ contract RoyaltyToken is Ownable, StandardToken {
   
   /**
    * set Quarters address so that we can call implementor method
-   * @param quarterAddress: implementer address of quarters
+   * quarterAddress: implementer address of quarters
    */
   function setQuarters(address quartersAddress) onlyOwner public
   {

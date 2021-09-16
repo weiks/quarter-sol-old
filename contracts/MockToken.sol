@@ -20,7 +20,7 @@ function _mint(address account, uint256 amount) internal  {
 
 /**
  * public mint that can be called from outside
- * @param address: address to send the token
+ * account: address to send the token
  * @param amount : amount to be minted on particular address 
  */
 function mint (address account,uint256 amount) public
