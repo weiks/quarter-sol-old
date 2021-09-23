@@ -4,13 +4,12 @@ import './Ownable.sol';
 import './StandardToken.sol';
 import './Q2.sol';
 import './MigrationTarget.sol';
-import './IQuarters.sol';
 
 interface TokenRecipient {
   function receiveApproval(address _from, uint256 _value, address _token, bytes _extraData) external;
 }
 
-contract Quarters is Ownable, StandardToken,IQuarters {
+contract Quarters is Ownable, StandardToken{
   // Public variables of the token
   string public name = "Quarters";
   string public symbol = "Q";
@@ -22,6 +21,9 @@ contract Quarters is Ownable, StandardToken,IQuarters {
   uint256 public tranche = 40000; // Number of Quarters in initial tranche
 
   
+  // List of developers
+  // address -> status
+  mapping (address => bool) public developers;
 
   uint256 public outstandingQuarters;
   address public q2;
@@ -71,6 +73,14 @@ contract Quarters is Ownable, StandardToken,IQuarters {
   event Withdraw(address indexed developer, uint256 value, uint256 _tranche, uint256 _outstandingQuarters, uint256 _etherPool);
   event BaseRateChanged(uint256 _baseRate, uint256 _tranche, uint256 _outstandingQuarters, uint256 _etherPool,  uint256 _totalSupply);
   event Reward(address indexed _address, uint256 value, uint256 _outstandingQuarters, uint256 _totalSupply);
+
+  /**
+   * developer modifier
+   */
+  modifier onlyActiveDeveloper() {
+    require(developers[msg.sender] == true);
+    _;
+  }
 
 
   /**
@@ -309,6 +319,7 @@ contract Quarters is Ownable, StandardToken,IQuarters {
     balances[buyer] += nq;
     trueBuy[buyer] += nq;
     outstandingQuarters += nq;
+    totalSupply +=nq;
 
     // change tranche size
     _changeTrancheIfNeeded();
@@ -319,14 +330,13 @@ contract Quarters is Ownable, StandardToken,IQuarters {
     // log rate change
     emit BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, kusdt.balanceOf(this), totalSupply);
 
-    //calculate royalty quarters
-    uint256 royaltyQuarters = amount.mul(royaltyPercentage).mul(kusdtRate).div(10**8);
-    balances[q2] += royaltyQuarters;
-    Q2(q2).disburse(royaltyQuarters);
+    uint256 royaltyAmount = amount.mul(royaltyPercentage).div(100);
+    // transfer owner's cut
+    kusdt.transfer(q2,royaltyAmount);
     
-    totalSupply = totalSupply + nq + royaltyQuarters;
-    outstandingQuarters = outstandingQuarters + nq + royaltyQuarters;
-    
+    Q2(q2).disburse(royaltyAmount);
+
+    // return nq
     return nq;
   }
 

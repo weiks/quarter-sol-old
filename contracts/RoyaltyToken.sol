@@ -3,7 +3,6 @@ pragma solidity ^0.4.18;
 import './SafeMath.sol';
 import './ERC20.sol';
 import './StandardToken.sol';
-import './IQuarters.sol';
 import './Ownable.sol';
 
 
@@ -13,9 +12,7 @@ contract RoyaltyToken is Ownable, StandardToken {
   // restricted addresses	
   mapping(address => bool) public restrictedAddresses;
   ERC20 public kusdt = ERC20(0x0d1531279A238c513bCe792F5bAcb782336B0C5a);
-  
-  IQuarters public quarters;
-  
+    
   event RestrictedStatusChanged(address indexed _address, bool status);
 
   struct Account {
@@ -87,16 +84,6 @@ contract RoyaltyToken is Ownable, StandardToken {
     updateAccount(_from);
     return super.transferFrom(_from, _to, _value);
   }
-  
-  /**
-   * set Quarters address so that we can call implementor method
-   * quarterAddress: implementer address of quarters
-   */
-  function setQuarters(address quartersAddress) onlyOwner public
-  {
-   quarters = IQuarters(quartersAddress);
-  }
-  
   /**
    * Change KUSDT Address if required so that we dont have to redeploy contract
    */
@@ -113,8 +100,8 @@ contract RoyaltyToken is Ownable, StandardToken {
     uint256 RoyaltyAmount = accounts[msg.sender].balance;
     require(RoyaltyAmount > 0);
     accounts[msg.sender].balance = 0;
-    quarters.withdraw(RoyaltyAmount);
 
+    
     // transfer Royalty amount
     kusdt.transfer(msg.sender,kusdt.balanceOf(this));
   }
