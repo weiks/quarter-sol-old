@@ -69,7 +69,7 @@ contract Quarters is Ownable, StandardToken{
   event DeveloperStatusChanged(address indexed developer, bool status);
   event TrancheIncreased(uint256 _tranche, uint256 _etherPool, uint256 _outstandingQuarters);
   event MegaEarnings(address indexed developer, uint256 value, uint256 _baseRate, uint256 _tranche, uint256 _outstandingQuarters, uint256 _etherPool);
-  event Withdraw(address indexed developer, uint256 value, uint256 _tranche, uint256 _outstandingQuarters, uint256 _etherPool);
+  event Withdraw(address indexed developer, uint256 value, uint256 _kusdtBaseRate, uint256 _tranche, uint256 _outstandingQuarters, uint256 _etherPool);
   event BaseRateChanged(uint256 _baseRate, uint256 _tranche, uint256 _outstandingQuarters, uint256 _etherPool,  uint256 _totalSupply);
   event Reward(address indexed _address, uint256 value, uint256 _outstandingQuarters, uint256 _totalSupply);
 
@@ -281,7 +281,7 @@ contract Quarters is Ownable, StandardToken{
     require(kusdt.balanceOf(msg.sender)>=amount);
     uint256 _value =  _buy(buyer,amount);
 
-    // allow donor (msg.sender) to spend buyer's toke
+    // allow donor (msg.sender) to spend buyer's tokens
     allowed[buyer][msg.sender] += _value;
     emit Approval(buyer, msg.sender, _value);
   }
@@ -374,7 +374,7 @@ contract Quarters is Ownable, StandardToken{
     uint256 etherPool = kusdt.balanceOf(this) - earnings;
 
     // event for withdraw
-    emit Withdraw(msg.sender, earnings, tranche, outstandingQuarters, etherPool);  // with current base rate
+    emit Withdraw(msg.sender, earnings, kusdtRate, tranche, outstandingQuarters, etherPool);  // with current base rate
 
     // log rate change
     emit BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, address(this).balance, totalSupply);
