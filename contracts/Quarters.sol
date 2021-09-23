@@ -8,7 +8,6 @@ import './MigrationTarget.sol';
 interface TokenRecipient {
   function receiveApproval(address _from, uint256 _value, address _token, bytes _extraData) external;
 }
-
 contract Quarters is Ownable, StandardToken{
   // Public variables of the token
   string public name = "Quarters";
