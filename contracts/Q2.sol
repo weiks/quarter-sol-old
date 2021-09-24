@@ -11,14 +11,17 @@ contract Q2 is Ownable, RoyaltyToken {
   string public symbol = "Q2";
   uint8 public decimals = 18;
 
+   // token used to buy quarters 
+  ERC20 public kusdt = ERC20(0xcee8faf64bb97a73bb51e115aa89c17ffa8dd167);
+
   bool public whitelist = true;
 
   // whitelist addresses
   mapping(address => bool) public whitelistedAddresses;
 
   // token creation cap
-  uint256 public creationCap = 15000000 * (10 ** 18); // 15M
-  uint256 public reservedFund = 10000000 * (10 ** 18); // 10M
+  uint256 public creationCap = 15000000000 * (10 ** 18); // 15B
+  uint256 public reservedFund = 10000000000 * (10 ** 18); // 10B
 
   // stage info
   struct Stage {
@@ -36,18 +39,18 @@ contract Q2 is Ownable, RoyaltyToken {
   event WhitelistStatusChanged(address indexed _address, bool status);
   event WhitelistChanged(bool status);
 
-  // eth wallet
-  address public ethWallet;
+  // kusdt wallet
+  address public kusdtWallet;
   mapping (uint8 => Stage) stages;
 
   // current state info
   uint8 public currentStage;
 
-  function Q2(address _ethWallet) public {
-    ethWallet = _ethWallet;
+  function Q2(address _kusdtWallet) public {
+    kusdtWallet = _kusdtWallet;
 
     // reserved tokens
-    mintTokens(ethWallet, reservedFund);
+    mintTokens(kusdtWallet, reservedFund);
   }
 
   function mintTokens(address to, uint256 value) internal {
@@ -63,6 +66,15 @@ contract Q2 is Ownable, RoyaltyToken {
   function () public payable {
     buyTokens();
   }
+  
+  /**
+   * Change KUSDT Address if required so that we dont have to redeploy contract
+   */
+  function changeKUSDT(address kusdtAddress) onlyOwner public
+  {
+    require(address(0)!=kusdtAddress);
+     kusdt = ERC20(kusdtAddress);
+  }
 
   function buyTokens() public payable {
     require(whitelist==false || whitelistedAddresses[msg.sender] == true);
@@ -75,6 +87,22 @@ contract Q2 is Ownable, RoyaltyToken {
     require(totalSupply.add(tokens) <= stage.cap);
 
     mintTokens(msg.sender, tokens);
+  }
+
+  function buyTokensWithKUSDT(uint256 kusdtAmount) public
+  {
+    require(kusdtAmount > 0);
+    require(kusdt.balanceOf(msg.sender)>=kusdtAmount);
+    require(whitelist==false || whitelistedAddresses[msg.sender] == true);
+
+    Stage memory stage = stages[currentStage];
+    require(block.number >= stage.startBlock && block.number <= stage.endBlock);
+
+     uint256 tokens = kusdtAmount * stage.exchangeRate;
+    require(totalSupply.add(tokens) <= stage.cap);
+
+    kusdt.transferFrom(msg.sender,address(this),kusdtAmount);
+    mintTokens(msg.sender, tokens); 
   }
 
   function startStage(
@@ -112,7 +140,7 @@ contract Q2 is Ownable, RoyaltyToken {
   }
 
   function withdraw() public onlyOwner {
-    ethWallet.transfer(address(this).balance);
+    kusdtWallet.transfer(address(this).balance);
   }
 
 
