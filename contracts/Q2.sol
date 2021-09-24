@@ -89,6 +89,10 @@ contract Q2 is Ownable, RoyaltyToken {
     mintTokens(msg.sender, tokens);
   }
 
+/**
+   * Buy q2 by sending kusdt
+   * @param kusdtAmount total kusdt amount
+   */
   function buyTokensWithKUSDT(uint256 kusdtAmount) public
   {
     require(kusdtAmount > 0);
