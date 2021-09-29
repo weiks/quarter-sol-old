@@ -1,4 +1,4 @@
-pragma solidity ^0.4.18;
+pragma solidity 0.5.6;
 
 import './SafeMath.sol';
 import './ERC20.sol';
@@ -11,7 +11,7 @@ contract RoyaltyToken is Ownable, StandardToken {
   using SafeMath for uint256;
   // restricted addresses	
   mapping(address => bool) public restrictedAddresses;
-  ERC20 public kusdt = ERC20(0x0d1531279A238c513bCe792F5bAcb782336B0C5a);
+  ERC20 public kusdt = ERC20(0xceE8FAF64bB97a73bb51E115Aa89C17FfA8dD167);
     
   event RestrictedStatusChanged(address indexed _address, bool status);
 
@@ -103,6 +103,6 @@ contract RoyaltyToken is Ownable, StandardToken {
 
     
     // transfer Royalty amount
-    kusdt.transfer(msg.sender,kusdt.balanceOf(this));
+    kusdt.transfer(msg.sender,kusdt.balanceOf(address(this)));
   }
 }

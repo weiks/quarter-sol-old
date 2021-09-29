@@ -1,14 +1,15 @@
-pragma solidity ^0.4.18;
+pragma solidity 0.5.6;
 
 import './Ownable.sol';
 import './StandardToken.sol';
 import './Q2.sol';
 import './MigrationTarget.sol';
+import './KlaySwap.sol';
 
 interface TokenRecipient {
-  function receiveApproval(address _from, uint256 _value, address _token, bytes _extraData) external;
+  function receiveApproval(address _from, uint256 _value, address _token, bytes calldata _extraData) external;
 }
-contract Quarters is Ownable, StandardToken{
+contract Quarters is  KlaySwap, StandardToken  {
   // Public variables of the token
   string public name = "Quarters";
   string public symbol = "Q";
@@ -29,12 +30,20 @@ contract Quarters is Ownable, StandardToken{
   mapping (address => bool) public developers;
 
   uint256 public outstandingQuarters;
-  address public q2;
+  
+  // for now we are using six 0xef82b1c6a550e730d8283e1edd4977cd01faf435
+  // once we create liquidity pool we will place actual q2 address
+  address payable public q2;
 
   uint32 private royaltyBasisPoints = 1500; // royalties in Basis Points
  
-  // token used to buy quarters 
-  ERC20 public kusdt = ERC20(0x885eaf1fA9604235d7F5C8B7Da1c732e82561B6B);
+  // token used to buy quarters
+  // for mainnet 0xceE8FAF64bB97a73bb51E115Aa89C17FfA8dD167
+  ERC20 public kusdt = ERC20(0xceE8FAF64bB97a73bb51E115Aa89C17FfA8dD167);
+ 
+  
+  // factory address for exchanging token from klayswap
+  address public factory = 0xC6a2Ad8cC6e4A7E08FC37cC5954be07d499E7654;
 
   // number of Quarters for next tranche
   uint8 public trancheNumerator = 2;
@@ -88,8 +97,8 @@ contract Quarters is Ownable, StandardToken{
    *
    * Initializes contract with initial supply tokens to the owner of the contract
    */
-  function Quarters(
-    address _q2,
+  constructor(
+    address payable _q2,
     uint256 firstTranche
   ) public {
     q2 = _q2;
@@ -189,12 +198,12 @@ contract Quarters is Ownable, StandardToken{
    * @param _value the max amount they can spend
    * @param _extraData some extra information to send to the approved contract
    */
-  function approveAndCall(address _spender, uint256 _value, bytes _extraData)
+  function approveAndCall(address _spender, uint256 _value, bytes memory _extraData)
   public
   returns (bool success) {
     TokenRecipient spender = TokenRecipient(_spender);
     if (approve(_spender, _value)) {
-      spender.receiveApproval(msg.sender, _value, this, _extraData);
+      spender.receiveApproval(msg.sender, _value, address(this), _extraData);
       return true;
     }
 
@@ -304,10 +313,19 @@ contract Quarters is Ownable, StandardToken{
     emit QuartersOrdered(buyer, kusdtAmount, nq);
 
     uint256 royaltyAmount = kusdtAmount.mul(royaltyBasisPoints).div(MAX_BASISPOINTS);
-    // transfer owner's cut
-    kusdt.transfer(q2,royaltyAmount);
+
+    address[] memory path = new address[](1);
+    path[0] = address(0);
     
-    Q2(q2).disburse(royaltyAmount);
+    /**
+     * Exchanging from q2 from dex
+     */ 
+    exchangeKctPos(address(kusdt),royaltyAmount,q2,path);
+    
+    /**
+     * Burning q2 token. we will uncomment once we create q2 pool
+     */ 
+    //Q2(q2)._burn(address(this),ERC20(q2).balanceOf(address(this)));
 
     // return nq
     return nq;
@@ -340,12 +358,12 @@ contract Quarters is Ownable, StandardToken{
   function withdraw(uint256 value) onlyActiveDeveloper public {
     require(balances[msg.sender] >= value);
 
-   uint256 earnings =  kusdt.balanceOf(this).mul(value).div(totalSupply);
+   uint256 earnings =  kusdt.balanceOf(address(this)).mul(value).div(totalSupply);
 
     balances[msg.sender] -= value;
     outstandingQuarters -= value; // update the outstanding Quarters
 
-    uint256 kusdtPool = kusdt.balanceOf(this) - earnings;
+    uint256 kusdtPool = kusdt.balanceOf(address(this)) - earnings;
 
     // event for withdraw
     emit Withdraw(msg.sender, earnings, kusdtRate, tranche, outstandingQuarters, kusdtPool);  // with current base rate

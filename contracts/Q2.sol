@@ -1,4 +1,4 @@
-pragma solidity ^0.4.18;
+pragma solidity 0.5.6;
 
 import './Ownable.sol';
 import './SafeMath.sol';
@@ -12,7 +12,7 @@ contract Q2 is Ownable, RoyaltyToken {
   uint8 public decimals = 18;
 
    // token used to buy quarters 
-  ERC20 public kusdt = ERC20(0xcee8faf64bb97a73bb51e115aa89c17ffa8dd167);
+  ERC20 public kusdt = ERC20(0xceE8FAF64bB97a73bb51E115Aa89C17FfA8dD167);
 
   bool public whitelist = true;
 
@@ -46,7 +46,7 @@ contract Q2 is Ownable, RoyaltyToken {
   // current state info
   uint8 public currentStage;
 
-  function Q2(address _kusdtWallet) public {
+  constructor(address _kusdtWallet) public {
     kusdtWallet = _kusdtWallet;
 
     // reserved tokens
@@ -63,7 +63,7 @@ contract Q2 is Ownable, RoyaltyToken {
     emit MintTokens(to, value);
   }
 
-  function () public payable {
+  function () external payable {
     buyTokens();
   }
   
@@ -89,10 +89,6 @@ contract Q2 is Ownable, RoyaltyToken {
     mintTokens(msg.sender, tokens);
   }
 
-/**
-   * Buy q2 by sending kusdt
-   * @param kusdtAmount total kusdt amount
-   */
   function buyTokensWithKUSDT(uint256 kusdtAmount) public
   {
     require(kusdtAmount > 0);
@@ -107,6 +103,7 @@ contract Q2 is Ownable, RoyaltyToken {
 
     kusdt.transferFrom(msg.sender,address(this),kusdtAmount);
     mintTokens(msg.sender, tokens); 
+
   }
 
   function startStage(
@@ -143,9 +140,9 @@ contract Q2 is Ownable, RoyaltyToken {
     emit StageStarted(currentStage, totalSupply, address(this).balance);
   }
 
-  function withdraw() public onlyOwner {
-    kusdtWallet.transfer(address(this).balance);
-  }
+//   function withdraw() public onlyOwner {
+//     kusdtWallet.transfer(address(this).balance);
+//   }
 
 
   function getCurrentStage() view public returns (
