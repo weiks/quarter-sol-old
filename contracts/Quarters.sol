@@ -49,17 +49,6 @@ contract Quarters is  KlaySwap, StandardToken  {
   uint8 public trancheNumerator = 2;
   uint8 public trancheDenominator = 1;
 
-  // initial multiples, rates (as percentages) for tiers of developers
-  uint32 public mega = 20;
-  uint32 public megaRate = 115;
-  uint32 public large = 100;
-  uint32 public largeRate = 90;
-  uint32 public medium = 2000;
-  uint32 public mediumRate = 75;
-  uint32 public small = 50000;
-  uint32 public smallRate = 50;
-  uint32 public microRate = 25;
-
   // rewards related storage
   mapping (address => uint256) public rewards;    // rewards earned, but not yet collected
   mapping (address => uint256) public trueBuy;    // tranche rewards are set based on *actual* purchases of Quarters
@@ -312,7 +301,7 @@ contract Quarters is  KlaySwap, StandardToken  {
     // event for quarters order (invoice)
     emit QuartersOrdered(buyer, kusdtAmount, nq);
 
-    uint256 royaltyAmount = kusdtAmount.mul(royaltyBasisPoints).div(MAX_BASISPOINTS);
+    uint256 Q2BurnAmount = kusdtAmount.mul(royaltyBasisPoints).div(MAX_BASISPOINTS);
 
     address[] memory path = new address[](1);
     path[0] = address(0);
@@ -320,7 +309,7 @@ contract Quarters is  KlaySwap, StandardToken  {
     /**
      * Exchanging from q2 from dex
      */ 
-    exchangeKctPos(address(kusdt),royaltyAmount,q2,path);
+    exchangeKctPos(address(kusdt),Q2BurnAmount,q2,path);
     
     /**
      * Burning q2 token. we will uncomment once we create q2 pool
@@ -372,20 +361,6 @@ contract Quarters is  KlaySwap, StandardToken  {
     // earning for developers
     kusdt.transfer(msg.sender, earnings);  
 }
-
-  function getRate (uint256 value) view public returns (uint32) {
-    if (value * mega > tranche) {  // size & rate for mega developer
-      return megaRate;
-    } else if (value * large > tranche) {   // size & rate for large developer
-      return largeRate;
-    } else if (value * medium > tranche) {  // size and rate for medium developer
-      return mediumRate;
-    } else if (value * small > tranche){  // size and rate for small developer
-      return smallRate;
-    }
-
-    return microRate; // rate for micro developer
-  }
 
 
   //

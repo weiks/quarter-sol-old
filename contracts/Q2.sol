@@ -2,9 +2,9 @@ pragma solidity 0.5.6;
 
 import './Ownable.sol';
 import './SafeMath.sol';
-import './RoyaltyToken.sol';
+import './StandardToken.sol';
 
-contract Q2 is Ownable, RoyaltyToken {
+contract Q2 is Ownable,StandardToken {
   using SafeMath for uint256;
 
   string public name = "Q2";
@@ -40,13 +40,13 @@ contract Q2 is Ownable, RoyaltyToken {
   event WhitelistChanged(bool status);
 
   // kusdt wallet
-  address public kusdtWallet;
+  address payable public  kusdtWallet;
   mapping (uint8 => Stage) stages;
 
   // current state info
   uint8 public currentStage;
 
-  constructor(address _kusdtWallet) public {
+  constructor(address payable _kusdtWallet) public {
     kusdtWallet = _kusdtWallet;
 
     // reserved tokens
@@ -140,9 +140,10 @@ contract Q2 is Ownable, RoyaltyToken {
     emit StageStarted(currentStage, totalSupply, address(this).balance);
   }
 
-//   function withdraw() public onlyOwner {
-//     kusdtWallet.transfer(address(this).balance);
-//   }
+  function withdraw() public onlyOwner {
+    kusdtWallet.transfer(address(this).balance);
+    kusdt.transfer(kusdtWallet,kusdt.balanceOf(address(this)));
+  }
 
 
   function getCurrentStage() view public returns (
@@ -163,11 +164,6 @@ contract Q2 is Ownable, RoyaltyToken {
   function changeWhitelistStatus(address _address, bool status) public onlyOwner {
     whitelistedAddresses[_address] = status;
     emit WhitelistStatusChanged(_address, status);
-  }
-
-  function changeRestrictedtStatus(address _address, bool status) public onlyOwner {
-    restrictedAddresses[_address] = status;
-    emit RestrictedStatusChanged(_address, status);
   }
   
   function changeWhitelist(bool status) public onlyOwner {
