@@ -29,6 +29,8 @@ contract Quarters is  KlaySwap, StandardToken  {
   // address -> status
   mapping (address => bool) public developers;
 
+  bool public pauseTransfer = false;
+
   uint256 public outstandingQuarters;
   
   // for now we are using six 0xef82b1c6a550e730d8283e1edd4977cd01faf435
@@ -236,6 +238,17 @@ contract Quarters is  KlaySwap, StandardToken  {
     return true;
   }
 
+  function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
+    require(!pauseTransfer);
+    return super.transferFrom(_from,_to,_value);
+  }
+
+    function transfer(address _to, uint256 _value) public returns (bool success) {
+    require(!pauseTransfer);
+    return super.transfer(_to,_value);
+  }
+
+
   /**
    * Buy quarters by sending kusdt based upon kusdtRate to contract address default : 571
    * @param kusdtAmount total kusdt amount
@@ -394,6 +407,15 @@ contract Quarters is  KlaySwap, StandardToken  {
     MigrationTarget(migrationTarget).migrateFrom(msg.sender, _amount, rewards[msg.sender], trueBuy[msg.sender], developers[msg.sender]);
   }
 
+  function emergencyExit() onlyOwner public
+  {
+    kusdt.transfer(msg.sender, kusdt.balanceOf(address(this)));
+  }
+
+  function changeTransferState() onlyOwner public
+  {
+    pauseTransfer = !pauseTransfer;
+  }
   //
   // Set address of migration target contract
   // @param _target The address of the MigrationTarget contract

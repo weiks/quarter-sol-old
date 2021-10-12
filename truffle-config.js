@@ -18,7 +18,15 @@
  *
  */
 
- const HDWalletProvider = require('@truffle/hdwallet-provider');
+ const Caver = require('caver-js')
+ //const HDWalletProvider = require('@truffle/hdwallet-provider');
+
+ const accessKeyId = "ACCESS_KEY";
+const secretAccessKey = "SECRET_KEY";
+
+const HDWalletProvider = require("truffle-hdwallet-provider-klaytn");
+const privateKey = "0x123";
+const cypressPrivateKey = "0x456";
  const privateKeys ="5b736da13aaf0393b81a19672de3c4df17a2ab9e546558d49a0cc113afe54604";
 // const infuraKey = "fj4jll3k.....";
 //
@@ -68,6 +76,36 @@ module.exports = {
       // # of confs to wait between deployments. (default: 0)
     timeoutBlocks: 200,  // # of blocks before a deployment times out  (minimum/default: 50)
     skipDryRun: true     // Skip dry run before migrations? (default: false for public nets )
+    },
+    kasCypress: {
+      provider: () => {
+        const option = {
+          headers: [
+            { name: 'Authorization', value: 'Basic ' + Buffer.from(accessKeyId + ':' + secretAccessKey).toString('base64') },
+            { name: 'x-chain-id', value: '8217' }
+          ],
+          keepAlive: false,
+        }
+        return new HDWalletProvider(cypressPrivateKey, new Caver.providers.HttpProvider("https://node-api.klaytnapi.com/v1/klaytn", option))
+      },
+      network_id: '8217', //Klaytn baobab testnet's network id
+      gas: '8500000',
+      gasPrice:'25000000000'
+    },
+    kasBaobab: {
+      provider: () => {
+        const option = {
+          headers: [
+            { name: 'Authorization', value: 'Basic ' + Buffer.from(accessKeyId + ':' + secretAccessKey).toString('base64') },
+            { name: 'x-chain-id', value: '1001' }
+          ],
+          keepAlive: false,
+        }
+        return new HDWalletProvider(privateKey, new Caver.providers.HttpProvider("https://node-api.klaytnapi.com/v1/klaytn", option))
+      },
+      network_id: '1001', //Klaytn baobab testnet's network id
+      gas: '8500000',
+      gasPrice:'25000000000'
     },
 
     // Useful for private networks
