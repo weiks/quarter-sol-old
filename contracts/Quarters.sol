@@ -5,6 +5,7 @@ import './StandardToken.sol';
 import './Q2.sol';
 import './MigrationTarget.sol';
 import './KlaySwap.sol';
+import './IPool.sol';
 
 interface TokenRecipient {
   function receiveApproval(address _from, uint256 _value, address _token, bytes calldata _extraData) external;
@@ -46,6 +47,8 @@ contract Quarters is  KlaySwap, StandardToken  {
   
   // factory address for exchanging token from klayswap
   address public factory = 0xC6a2Ad8cC6e4A7E08FC37cC5954be07d499E7654;
+  
+  address public poolAddress = 0x17E2b8579dCD2fC8c4D60bBabee32dF9b7618133;
 
   // number of Quarters for next tranche
   uint8 public trancheNumerator = 2;
@@ -111,6 +114,15 @@ contract Quarters is  KlaySwap, StandardToken  {
   }
 
   /**
+   * Change PoolAddress
+   */
+  function changePoolAddress(address newPoolAddress) onlyOwner public
+  {
+    require(address(0)!=poolAddress);
+     poolAddress = newPoolAddress;
+  }
+  
+   /**
    * Change KUSDT Address if required so that we dont have to redeploy contract
    */
   function changeKUSDT(address kusdtAddress) onlyOwner public
@@ -320,14 +332,23 @@ contract Quarters is  KlaySwap, StandardToken  {
     path[0] = address(0);
     
     /**
+     * Will uncommnet once we create pool
      * Exchanging from q2 from dex
      */ 
-    exchangeKctPos(address(kusdt),Q2BurnAmount,q2,path);
+    //exchangeKctPos(address(kusdt),Q2BurnAmount,q2,path);
+    
     
     /**
-     * Burning q2 token. we will uncomment once we create q2 pool
-     */ 
-    //Q2(q2)._burn(address(this),ERC20(q2).balanceOf(address(this)));
+     * Approving PoolAddress to Spend Token
+     */
+    kusdt.approve(poolAddress,Q2BurnAmount);
+    
+    /**
+     * Exchanging q2 with kusdt
+     */
+    IPool(poolAddress).exchangeQ2withKusdt(Q2BurnAmount);
+
+    Q2(q2)._burn(address(this),Q2(q2).balanceOf(address(this)));
 
     // return nq
     return nq;
