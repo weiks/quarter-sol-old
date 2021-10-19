@@ -6,7 +6,12 @@ import './IPool.sol';
 
 contract Pool is Ownable,IPool
 {
-    uint256 public exchangeRate  = 10 ** 16;
+    /**
+     * Decimal of q2 18 and Decimal of kusdt is 6
+     * exchange rate 10**6 kusdt = 100*10**18q2
+     * 1 kusdt = 10**14
+     */
+    uint256 public exchangeRate  = 10 ** 14;
     
     ERC20 public kusdt = ERC20(0xceE8FAF64bB97a73bb51E115Aa89C17FfA8dD167);
     
