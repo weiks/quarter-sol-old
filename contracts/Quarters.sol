@@ -1,44 +1,60 @@
-pragma solidity ^0.4.18;
+pragma solidity 0.5.6;
 
 import './Ownable.sol';
 import './StandardToken.sol';
 import './Q2.sol';
 import './MigrationTarget.sol';
+import './KlaySwap.sol';
+import './IPool.sol';
 
 interface TokenRecipient {
-  function receiveApproval(address _from, uint256 _value, address _token, bytes _extraData) external;
+  function receiveApproval(address _from, uint256 _value, address _token, bytes calldata _extraData) external;
 }
-
-contract Quarters is Ownable, StandardToken {
+contract Quarters is  KlaySwap, StandardToken  {
   // Public variables of the token
   string public name = "Quarters";
   string public symbol = "Q";
   uint8 public decimals = 0; // no decimals, only integer quarters
+  
+  using SafeMath for uint256;
 
-  uint16 public ethRate = 4000; // Quarters/ETH
+  uint16 public kusdtRate = 571; // Quarters/KUSDT
   uint256 public tranche = 40000; // Number of Quarters in initial tranche
 
+  uint256 public MAX_BASISPOINTS = 10000; //Max Value 
+
+  uint256 public withDrawBasisPoints = 1500; // withDraw in Basis Points
+  
+  bool swapFromDex = false;
+
+  
   // List of developers
   // address -> status
   mapping (address => bool) public developers;
 
+  bool public pauseTransfer = false;
+
   uint256 public outstandingQuarters;
-  address public q2;
+  
+  // for now we are using six 0xef82b1c6a550e730d8283e1edd4977cd01faf435
+  // once we create liquidity pool we will place actual q2 address
+  address payable public q2;
+
+  uint32 private royaltyBasisPoints = 1500; // royalties in Basis Points
+ 
+  // token used to buy quarters
+  // for mainnet 0xceE8FAF64bB97a73bb51E115Aa89C17FfA8dD167
+  ERC20 public kusdt = ERC20(0xceE8FAF64bB97a73bb51E115Aa89C17FfA8dD167);
+ 
+  
+  // factory address for exchanging token from klayswap
+  address public factory = 0xC6a2Ad8cC6e4A7E08FC37cC5954be07d499E7654;
+  
+  address public poolAddress = 0x82dF10Cf1B69D7659beA24416247EFc243c99185;
 
   // number of Quarters for next tranche
   uint8 public trancheNumerator = 2;
   uint8 public trancheDenominator = 1;
-
-  // initial multiples, rates (as percentages) for tiers of developers
-  uint32 public mega = 20;
-  uint32 public megaRate = 115;
-  uint32 public large = 100;
-  uint32 public largeRate = 90;
-  uint32 public medium = 2000;
-  uint32 public mediumRate = 75;
-  uint32 public small = 50000;
-  uint32 public smallRate = 50;
-  uint32 public microRate = 25;
 
   // rewards related storage
   mapping (address => uint256) public rewards;    // rewards earned, but not yet collected
@@ -49,21 +65,18 @@ contract Quarters is Ownable, StandardToken {
   uint8 public rewardNumerator = 1;
   uint8 public rewardDenominator = 4;
 
-  // reserve ETH from Q2 to fund rewards
-  uint256 public reserveETH=0;
-
-  // ETH rate changed
-  event EthRateChanged(uint16 currentRate, uint16 newRate);
+  // KUSDT rate changed
+  event KUSDTRateChanged(uint16 currentRate, uint16 newRate);
 
   // This notifies clients about the amount burnt
   event Burn(address indexed from, uint256 value);
 
-  event QuartersOrdered(address indexed sender, uint256 ethValue, uint256 tokens);
+  event QuartersOrdered(address indexed sender, uint256 kusdtValue, uint256 tokens);
   event DeveloperStatusChanged(address indexed developer, bool status);
-  event TrancheIncreased(uint256 _tranche, uint256 _etherPool, uint256 _outstandingQuarters);
-  event MegaEarnings(address indexed developer, uint256 value, uint256 _baseRate, uint256 _tranche, uint256 _outstandingQuarters, uint256 _etherPool);
-  event Withdraw(address indexed developer, uint256 value, uint256 _baseRate, uint256 _tranche, uint256 _outstandingQuarters, uint256 _etherPool);
-  event BaseRateChanged(uint256 _baseRate, uint256 _tranche, uint256 _outstandingQuarters, uint256 _etherPool,  uint256 _totalSupply);
+  event TrancheIncreased(uint256 _tranche, uint256 _kusdtPool, uint256 _outstandingQuarters);
+  event MegaEarnings(address indexed developer, uint256 value, uint256 _baseRate, uint256 _tranche, uint256 _outstandingQuarters, uint256 _kusdtPool);
+  event Withdraw(address indexed developer, uint256 value, uint256 _kusdtBaseRate, uint256 _tranche, uint256 _outstandingQuarters, uint256 _kusdtPool);
+  event BaseRateChanged(uint256 _baseRate, uint256 _tranche, uint256 _outstandingQuarters, uint256 _kusdtPool,  uint256 _totalSupply);
   event Reward(address indexed _address, uint256 value, uint256 _outstandingQuarters, uint256 _totalSupply);
 
   /**
@@ -74,24 +87,30 @@ contract Quarters is Ownable, StandardToken {
     _;
   }
 
+
   /**
    * Constructor function
    *
    * Initializes contract with initial supply tokens to the owner of the contract
    */
-  function Quarters(
-    address _q2,
+  constructor(
+    address payable _q2,
     uint256 firstTranche
   ) public {
     q2 = _q2;
     tranche = firstTranche; // number of Quarters to be sold before increasing price
   }
 
-  function setEthRate (uint16 rate) onlyOwner public {
-    // Ether price is set in Wei
+  function setKusdtRate (uint16 rate) onlyOwner public {
+    // Quarters token to be provided for 1 kusdt 
     require(rate > 0);
-    ethRate = rate;
-    emit EthRateChanged(ethRate, rate);
+    kusdtRate = rate;
+    emit KUSDTRateChanged(kusdtRate, rate);
+  }
+  
+  function changeSwapFromDex (bool newSwapFromDex) onlyOwner public {
+    // Quarters token to be provided for 1 kusdt 
+    swapFromDex = newSwapFromDex;
   }
 
   /**
@@ -101,32 +120,30 @@ contract Quarters is Ownable, StandardToken {
     rewardAmount = reward; // may be zero, no need to check value to 0
   }
 
-  function adjustWithdrawRate(uint32 mega2, uint32 megaRate2, uint32 large2, uint32 largeRate2, uint32 medium2, uint32 mediumRate2, uint32 small2, uint32 smallRate2, uint32 microRate2) onlyOwner public {
-    // the values (mega, large, medium, small) are multiples, e.g., 20x, 100x, 10000x
-    // the rates (megaRate, etc.) are percentage points, e.g., 150 is 150% of the remaining etherPool
-    if (mega2 > 0 && megaRate2 > 0) {
-      mega = mega2;
-      megaRate = megaRate2;
-    }
+  /**
+   * Change PoolAddress
+   */
+  function changePoolAddress(address newPoolAddress) onlyOwner public
+  {
+    require(address(0)!=poolAddress);
+     poolAddress = newPoolAddress;
+  }
+  
+   /**
+   * Change KUSDT Address if required so that we dont have to redeploy contract
+   */
+  function changeKUSDT(address kusdtAddress) onlyOwner public
+  {
+    require(address(0)!=kusdtAddress);
+     kusdt = ERC20(kusdtAddress);
+  }
 
-    if (large2 > 0 && largeRate2 > 0) {
-      large = large2;
-      largeRate = largeRate2;
-    }
-
-    if (medium2 > 0 && mediumRate2 > 0) {
-      medium = medium2;
-      mediumRate = mediumRate2;
-    }
-
-    if (small2 > 0 && smallRate2 > 0){
-      small = small2;
-      smallRate = smallRate2;
-    }
-
-    if (microRate2 > 0) {
-      microRate = microRate2;
-    }
+  /**
+   * adjust withDrawBasisPoints
+   */
+  function adjustWithdrawBasisPoints(uint256 _withDrawBasisPoints) onlyOwner public {
+    require(_withDrawBasisPoints>0);
+    withDrawBasisPoints = _withDrawBasisPoints; 
   }
 
   /**
@@ -166,13 +183,6 @@ contract Quarters is Ownable, StandardToken {
       totalSupply += _reward;
       outstandingQuarters += _reward;
 
-      uint256 spentETH = (_reward * (10 ** 18)) / ethRate;
-      if (reserveETH >= spentETH) {
-          reserveETH -= spentETH;
-        } else {
-          reserveETH = 0;
-        }
-
       // tranche size change
       _changeTrancheIfNeeded();
 
@@ -198,12 +208,12 @@ contract Quarters is Ownable, StandardToken {
    * @param _value the max amount they can spend
    * @param _extraData some extra information to send to the approved contract
    */
-  function approveAndCall(address _spender, uint256 _value, bytes _extraData)
+  function approveAndCall(address _spender, uint256 _value, bytes memory _extraData)
   public
   returns (bool success) {
     TokenRecipient spender = TokenRecipient(_spender);
     if (approve(_spender, _value)) {
-      spender.receiveApproval(msg.sender, _value, this, _extraData);
+      spender.receiveApproval(msg.sender, _value, address(this), _extraData);
       return true;
     }
 
@@ -224,8 +234,6 @@ contract Quarters is Ownable, StandardToken {
     outstandingQuarters -= _value;              // Update outstanding quarters
     emit Burn(msg.sender, _value);
 
-    // log rate change
-    emit BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, address(this).balance, totalSupply);
     return true;
   }
 
@@ -246,24 +254,39 @@ contract Quarters is Ownable, StandardToken {
     outstandingQuarters -= _value;              // Update outstanding quarters
     emit Burn(_from, _value);
 
-    // log rate change
-    emit BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, address(this).balance, totalSupply);
     return true;
   }
 
+  function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
+    require(!pauseTransfer);
+    return super.transferFrom(_from,_to,_value);
+  }
+
+    function transfer(address _to, uint256 _value) public returns (bool success) {
+    require(!pauseTransfer);
+    return super.transfer(_to,_value);
+  }
+
+
   /**
-   * Buy quarters by sending ethers to contract address (no data required)
+   * Buy quarters by sending kusdt based upon kusdtRate to contract address default : 571
+   * @param kusdtAmount total kusdt amount
    */
-  function () payable public {
-    _buy(msg.sender);
+
+  function buy(uint256 kusdtAmount) public {
+     require(kusdt.balanceOf(msg.sender)>=kusdtAmount); 
+    _buy(msg.sender,kusdtAmount);
   }
 
-  function buy() payable public {
-    _buy(msg.sender);
-  }
+  /**
+   * Buy quarters for specific address and take approval to spend by spender by sending kusdt based upon kusdtRate to contract address default : 571
+   * @param buyer address to send quarters
+   * @param kusdtAmount total kusdt amount to spend
+   */
 
-  function buyFor(address buyer) payable public {
-    uint256 _value =  _buy(buyer);
+  function buyFor(address buyer,uint256 kusdtAmount) payable public {
+    require(kusdt.balanceOf(msg.sender)>=kusdtAmount);
+    uint256 _value =  _buy(buyer,kusdtAmount);
 
     // allow donor (msg.sender) to spend buyer's tokens
     allowed[buyer][msg.sender] += _value;
@@ -280,32 +303,65 @@ contract Quarters is Ownable, StandardToken {
     }
   }
 
-  // returns number of quarters buyer got
-  function _buy(address buyer) internal returns (uint256) {
-    require(buyer != address(0));
+  // change royalties Basis Point only owner 
+  function changeRoyaltiesBasisPoints(uint32 _royaltyBasisPoints) onlyOwner public
+  {
+    royaltyBasisPoints = _royaltyBasisPoints;
+  }
+  
 
-    uint256 nq = (msg.value * ethRate) / (10 ** 18);
+  // returns number of quarters buyer got
+  function _buy(address buyer,uint256 kusdtAmount) internal returns (uint256) {
+    require(buyer != address(0));
+    
+    kusdt.transferFrom(msg.sender,address(this),kusdtAmount);
+    uint256 nq = kusdtAmount.mul(kusdtRate).div(10**6);
     require(nq != 0);
     if (nq > tranche) {
       nq = tranche;
     }
 
-    totalSupply += nq;
+    
     balances[buyer] += nq;
     trueBuy[buyer] += nq;
     outstandingQuarters += nq;
+    totalSupply +=nq;
 
     // change tranche size
     _changeTrancheIfNeeded();
 
     // event for quarters order (invoice)
-    emit QuartersOrdered(buyer, msg.value, nq);
+    emit QuartersOrdered(buyer, kusdtAmount, nq);
 
-    // log rate change
-    emit BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, address(this).balance, totalSupply);
+    uint256 Q2BurnAmount = kusdtAmount.mul(royaltyBasisPoints).div(MAX_BASISPOINTS);
 
-    // transfer owner's cut
-    Q2(q2).disburse.value(msg.value * 15 / 100)();
+    address[] memory path = new address[](1);
+    path[0] = address(0);
+    
+    /**
+     * 
+     * Exchanging from q2 from dex
+     */
+     
+     if(swapFromDex)
+     {
+         exchangeKctPos(address(kusdt),Q2BurnAmount,q2,path); 
+     }
+    
+    else
+    {
+       /**
+     * Approving PoolAddress to Spend Token
+     */
+    kusdt.approve(poolAddress,Q2BurnAmount);
+    
+    /**
+     * Exchanging q2 with kusdt
+     */
+    IPool(poolAddress).exchangeQ2withKusdt(Q2BurnAmount); 
+    }
+
+    Q2(q2)._burn(address(this),Q2(q2).balanceOf(address(this)));
 
     // return nq
     return nq;
@@ -338,61 +394,20 @@ contract Quarters is Ownable, StandardToken {
   function withdraw(uint256 value) onlyActiveDeveloper public {
     require(balances[msg.sender] >= value);
 
-    uint256 baseRate = getBaseRate();
-    require(baseRate > 0); // check if base rate > 0
-
-    uint256 earnings = value * baseRate;
-    uint256 rate = getRate(value); // get rate from value and tranche
-    uint256 earningsWithBonus = (rate * earnings) / 100;
-    if (earningsWithBonus > address(this).balance) {
-      earnings = address(this).balance;
-    } else {
-      earnings = earningsWithBonus;
-    }
+   uint256 earnings =  kusdt.balanceOf(address(this)).mul(value).div(totalSupply);
 
     balances[msg.sender] -= value;
     outstandingQuarters -= value; // update the outstanding Quarters
 
-    uint256 etherPool = address(this).balance - earnings;
-    if (rate == megaRate) {
-      emit MegaEarnings(msg.sender, earnings, baseRate, tranche, outstandingQuarters, etherPool); // with current base rate
-    }
+    uint256 kusdtPool = kusdt.balanceOf(address(this)) - earnings;
 
     // event for withdraw
-    emit Withdraw(msg.sender, earnings, baseRate, tranche, outstandingQuarters, etherPool);  // with current base rate
+    emit Withdraw(msg.sender, earnings, kusdtRate, tranche, outstandingQuarters, kusdtPool);  // with current base rate
 
-    // log rate change
-    emit BaseRateChanged(getBaseRate(), tranche, outstandingQuarters, address(this).balance, totalSupply);
 
     // earning for developers
-    msg.sender.transfer(earnings);  
+    kusdt.transfer(msg.sender, earnings);  
 }
-
-  function disburse() public payable {
-    reserveETH += msg.value;
-  }
-
-  function getBaseRate () view public returns (uint256) {
-    if (outstandingQuarters > 0) {
-      return (address(this).balance - reserveETH) / outstandingQuarters;
-    }
-
-    return (address(this).balance - reserveETH);
-  }
-
-  function getRate (uint256 value) view public returns (uint32) {
-    if (value * mega > tranche) {  // size & rate for mega developer
-      return megaRate;
-    } else if (value * large > tranche) {   // size & rate for large developer
-      return largeRate;
-    } else if (value * medium > tranche) {  // size and rate for medium developer
-      return mediumRate;
-    } else if (value * small > tranche){  // size and rate for small developer
-      return smallRate;
-    }
-
-    return microRate; // rate for micro developer
-  }
 
 
   //
@@ -426,6 +441,15 @@ contract Quarters is Ownable, StandardToken {
     MigrationTarget(migrationTarget).migrateFrom(msg.sender, _amount, rewards[msg.sender], trueBuy[msg.sender], developers[msg.sender]);
   }
 
+  function emergencyExit() onlyOwner public
+  {
+    kusdt.transfer(msg.sender, kusdt.balanceOf(address(this)));
+  }
+
+  function changeTransferState() onlyOwner public
+  {
+    pauseTransfer = !pauseTransfer;
+  }
   //
   // Set address of migration target contract
   // @param _target The address of the MigrationTarget contract

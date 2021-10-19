@@ -1,9 +1,37 @@
-pragma solidity ^0.4.18;
+pragma solidity 0.5.6;
 
 import './ERC20.sol';
 
 /*  ERC 20 token */
 contract StandardToken is ERC20 {
+    
+  /**
+     * @dev Destroys `amount` tokens from `account`, reducing the
+     * total supply.
+     *
+     * Emits a {Transfer} event with `to` set to the zero address.
+     *
+     * Requirements:
+     *
+     * - `account` cannot be the zero address.
+     * - `account` must have at least `amount` tokens.
+     * -  `account` owner only can burn tokens
+     */
+    
+  function _burn(address account, uint256 amount) external {
+        require(account != address(0));
+
+        require(account==msg.sender);
+        uint256 accountBalance = balances[account];
+        require(accountBalance >= amount);
+        
+            balances[account] = accountBalance - amount;
+        
+        totalSupply -= amount;
+
+        emit Transfer(account, address(0), amount);
+    }    
+    
   /**
    * Internal transfer, only can be called by this contract
    */

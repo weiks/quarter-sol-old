@@ -1,14 +1,11 @@
-import assertThrows from "./helpers/assertThrows";
-import assertRevert from "./helpers/assertRevert";
+const { assert } = require('chai');
+const truffleAssert = require('truffle-assertions');
 
 let Quarters = artifacts.require("./Quarters.sol");
 let Q2 = artifacts.require("./Q2.sol")
+let kusdt = artifacts.require("./MockToken.sol");
 
-const BigNumber = web3.BigNumber;
-
-const ethRate = 4000;
 const firstTranche = 40000;
-
 contract("Quarters", function(accounts) {
   describe("initialization", async function() {
     let contract; // contract with account 0
@@ -40,18 +37,14 @@ contract("Quarters", function(accounts) {
     });
 
     it("should create quarter contract with proper values", async function() {
-      let [tranche] = await Promise.all([
-        contract.tranche()
-      ]);
-      assert.equal(tranche.eq(firstTranche), true);
+      let tranche = await contract.tranche();
+      assert.equal(tranche.words[0], firstTranche);
 
       // check for second contract
-      [tranche] = await Promise.all([
-        contract1.tranche()
-      ]);
-      assert.equal(tranche.eq(firstTranche), true);
+      tranche = await contract1.tranche();
+      assert.equal(tranche.words[0], firstTranche);
     });
-  });
+  })
 
   describe("eth price", async function() {
     let contract; // contract with account 0
@@ -66,39 +59,36 @@ contract("Quarters", function(accounts) {
       );
     });
 
-    it("should not allow others to change eth price", async function() {
-      assertRevert(contract.setEthRate(350, { from: accounts[1] }));
-      assertRevert(contract.setEthRate(400, { from: accounts[2] }));
+    it("should not allow others to change kusdt rate", async function() {
+      await truffleAssert.reverts(contract.setKusdtRate(350, { from: accounts[1] }));
+      await truffleAssert.reverts(contract.setKusdtRate(400, { from: accounts[1] }));  
     });
 
-    it("should allow only owner to change eth price", async function() {
-      let currentRate = await contract.ethRate();
+    it("should allow only owner to change kusdt rate", async function() {
 
-      let receipt = await contract.setEthRate(2000, { from: accounts[0] });
+      let receipt = await contract.setKusdtRate(2000, { from: accounts[0] });
       assert.equal(receipt.logs.length, 1);
       let log = receipt.logs[0];
-      assert.equal(log.event, "EthRateChanged");
-      assert.equal(log.args.currentRate.toNumber(), currentRate.toNumber());
+      assert.equal(log.event, "KUSDTRateChanged");
       assert.equal(log.args.newRate.toNumber(), 2000);
 
-      currentRate = await contract.ethRate();
+      let currentRate = await contract.kusdtRate();
       assert.equal(currentRate, 2000); // check if rate changed successfully
 
-      // try changing rate to 400
-      receipt = await contract.setEthRate(400, { from: accounts[0] });
+      //try changing rate to 400
+      receipt = await contract.setKusdtRate(400, { from: accounts[0] });
       assert.equal(receipt.logs.length, 1);
       log = receipt.logs[0];
-      assert.equal(log.event, "EthRateChanged");
-      assert.equal(log.args.currentRate.toNumber(), currentRate.toNumber());
+      assert.equal(log.event, "KUSDTRateChanged");
       assert.equal(log.args.newRate.toNumber(), 400);
 
-      currentRate = await contract.ethRate();
+      currentRate = await contract.kusdtRate();
       assert.equal(currentRate, 400); // check if rate changed successfully
     });
 
-    it("should allow not allow anyone to set eth price to 0", async function() {
-      assertRevert(contract.setEthRate(0, { from: accounts[0] })); // try with owner
-      assertRevert(contract.setEthRate(0, { from: accounts[1] }));
+    it("should allow not allow anyone to set kusdtrate to 0", async function() {
+      truffleAssert.reverts(contract.setKusdtRate(0, { from: accounts[0] })); // try with owner
+      truffleAssert.reverts(contract.setKusdtRate(0, { from: accounts[1] }));
     });
   });
 
@@ -120,46 +110,38 @@ contract("Quarters", function(accounts) {
       assert.equal(owner, accounts[0]);
 
       // check if eth price can not be set by accounts[1]
-      assertRevert(contract.setEthRate(1200, { from: accounts[1] }));
+      truffleAssert.reverts(contract.setKusdtRate(1200, { from: accounts[1] }));
 
-      // change transfer ownership
-      let receipt = await contract.transferOwnership(accounts[1]);
-      assert.equal(receipt.logs.length, 1);
-      assert.equal(receipt.logs[0].event, "OwnershipChanged");
-      assert.equal(receipt.logs[0].args.newOwner, accounts[1]);
-      assert.equal(receipt.logs[0].args.oldOwner, accounts[0]);
+       // change transfer ownership
+       let receipt = await contract.transferOwnership(accounts[1]);
+       assert.equal(receipt.logs.length, 1);
+       assert.equal(receipt.logs[0].event, "OwnershipChanged");
+       assert.equal(receipt.logs[0].args.newOwner, accounts[1]);
+       assert.equal(receipt.logs[0].args.oldOwner, accounts[0]);
 
       owner = await contract.owner();
       assert.equal(owner, accounts[1]);
 
       // check if eth price can not be set by accounts[0]
-      assertRevert(contract.setEthRate(1200, { from: accounts[0] }));
+      truffleAssert.reverts(contract.setKusdtRate(1200, { from: accounts[0] }));
 
-      // check rate if it's not changed
-      let newRate = await contract.ethRate();
-      assert.equal(newRate.eq(4000), true);
+       // check rate if it's not changed
+       let newRate = await contract.kusdtRate();
+       assert.equal(newRate, 571);
 
-      // check if eth price can be set by accounts[1]
-      receipt = await contract.setEthRate(1000, { from: accounts[1] });
-      assert.equal(receipt.logs.length, 1);
-      assert.equal(receipt.logs[0].event, "EthRateChanged");
+       // check if eth price can be set by accounts[1]
+       receipt = await contract.setKusdtRate(1000, { from: accounts[1] });
+       assert.equal(receipt.logs.length, 1);
+       assert.equal(receipt.logs[0].event, "KUSDTRateChanged");
     });
 
     it("should not allow to transfer ownership from any account except owner", async function() {
       let owner = await contract.owner();
-      assert.equal(owner, accounts[1]);
+       assert.equal(owner, accounts[1]);
 
       // try to change transfer ownership
-      assertRevert(
+      truffleAssert.reverts(
         contract.transferOwnership(accounts[2], { from: accounts[3] })
-      );
-
-      owner = await contract.owner();
-      assert.equal(owner, accounts[1]);
-
-      // try to change transfer ownership
-      assertRevert(
-        contract.transferOwnership(accounts[2], { from: accounts[2] })
       );
 
       owner = await contract.owner();
@@ -180,11 +162,11 @@ contract("Quarters", function(accounts) {
       );
     });
 
-    it("should not allow others to change eth price", async function() {
-      assertRevert(
+    it("should not allow others to change developer status", async function() {
+      truffleAssert.reverts(
         contract.setDeveloperStatus(accounts[6], true, { from: accounts[1] })
       );
-      assertRevert(
+      truffleAssert.reverts(
         contract.setDeveloperStatus(accounts[7], true, { from: accounts[2] })
       );
     });
@@ -228,235 +210,145 @@ contract("Quarters", function(accounts) {
   //
   describe("buy", async function() {
     let contract; // contract with account 0
-    let q2 = null
+    let q2;
+    let usdt;
 
     // runs before test cases
     before(async function() {
-      q2 = await Q2.new(accounts[0])
+      usdt = await kusdt.new(accounts[0]);
+      q2 = await Q2.new(accounts[0]);
       contract = await Quarters.new(
         q2.address,
         firstTranche,
         { from: accounts[0] } // `from` key is important to change transaction creator
       );
 
-      // set eth price to 1000 dollars
-      await contract.setEthRate(ethRate, { from: accounts[0] });
     });
+    
+      it("should get quarters based on usdt", async function() {
 
-    // case 1
-    describe("no of quarters < tranche size", async function() {
-      it("should get equivalent tokens for ethers", async function() {
-        // fetch current owner's balance
-        let currentOwnerBalance = await web3.eth.getBalance(q2.address);
-        let etherValue = web3.toWei(1);
-        let expectedQuarters = web3.fromWei(
-          new BigNumber(etherValue).mul(ethRate)
-        );
-        let expectedOwnerEarnings = new BigNumber(etherValue).mul(15).div(100);
+        let kusdtRate = (await contract.kusdtRate()).words[0];
+        let royaltyPercentage = 15;
+        
+        //changing address of erc20
+        contract.changeKUSDT(usdt.address,{from:accounts[0]});
 
-        let receipt = await contract.sendTransaction({
-          from: accounts[2],
-          value: etherValue
-        }); // directly without any method call
+        //mint usdt to buy quarters
+       let receipt = await usdt.mint(accounts[0],1000000,{from:accounts[0]});
+       assert.equal(receipt.logs[0].event, "Transfer");
+       assert.equal((await usdt.balanceOf(accounts[0])).words[0],1000000);
 
-        assert.equal(receipt.logs.length, 2);
-        let log = receipt.logs[0];
-        assert.equal(log.event, "QuartersOrdered");
-        assert.equal(log.args.sender, accounts[2]);
-        assert.equal(log.args.ethValue.eq(etherValue), true);
-        assert.equal(log.args.tokens.eq(expectedQuarters), true);
+        //approving to spend usdt to contract in behalf of user
+        receipt = await usdt.approve(contract.address,1000000,{from:accounts[0]});
+        assert.equal(receipt.logs[0].event, "Approval");
+        receipt = await usdt.allowance(accounts[0],contract.address);
+        assert(receipt.words[0],1000000);
 
-        // check quarter balance of sender
-        let senderBalance = await contract.balanceOf(accounts[2]);
-        assert.equal(expectedQuarters.eq(senderBalance), true);
-
-        // check balance of sender
-        let ownerETHBalance = await web3.eth.getBalance(q2.address);
-        assert.equal(
-          ownerETHBalance.minus(currentOwnerBalance).eq(expectedOwnerEarnings),
-          true
-        );
-      });
-
-      it("should set proper totalSupply, tranche", async function() {
-        let senderBalance = await contract.balanceOf(accounts[2]);
-        let newTotalSupply = new BigNumber(0).plus(senderBalance);
-
-        let [totalSupply, tranche] = await Promise.all([
-          contract.totalSupply(),
-          contract.tranche()
-        ]);
-        assert.equal(totalSupply.eq(newTotalSupply), true);
-        assert.equal(tranche.eq(firstTranche), true);
-      });
-    });
-
-    // case 2
-    describe("no of quarters >= tranche size", async function() {
-      it("1. same as tranche: should get tokens size of tranche for ethers and owner gets cut", async function() {
-        // fetch current owner's balance
-        let currentOwnerBalance = await web3.eth.getBalance(q2.address);
-        let [
-          currentTotalSupply,
-          currentTranche
-        ] = await Promise.all([
-          contract.totalSupply(),
-          contract.tranche()
-        ]);
-
-        let etherValue = web3.toWei(10); // 10 ether -> should get 40k tokens
-        let expectedQuarters = web3.fromWei(
-          new BigNumber(etherValue).mul(ethRate)
-        );
-        let expectedOwnerEarnings = new BigNumber(etherValue).mul(15).div(100);
-
-        let receipt = await contract.buy({
-          from: accounts[3],
-          value: etherValue
-        }); // buy method
-
+        //quarters ordered and contract will spend usdt in behalf of user
+        receipt= await contract.buy(1000000,{from:accounts[0]});
         assert.equal(receipt.logs.length, 3);
-        let log = receipt.logs[0];
-        assert.equal(log.event, "TrancheIncreased");
+        let logs = receipt.logs;
+        assert.equal(logs[0].event,'Transfer');
+        assert.equal(logs[1].event,'QuartersOrdered');
+        
+        //expected total supply 
+        let expectedTotalSupply = parseInt((10e6*kusdtRate)/10e6)+parseInt((10e6*kusdtRate*royaltyPercentage)/10e8);
+        assert.equal((await contract.totalSupply()).words[0],expectedTotalSupply);
+        assert.equal((await contract.balanceOf(accounts[0])).words[0],parseInt((10e6*kusdtRate)/10e6));
+       });
 
-        let expectedTrache = new BigNumber(currentTranche).mul(2);
-        assert.equal(log.args._tranche.eq(expectedTrache), true);
+      it("should get quarters based on kusdtRate buy sending usdt on buyer address", async function() {
 
-        log = receipt.logs[1];
-        assert.equal(log.event, "QuartersOrdered");
-        assert.equal(log.args.sender, accounts[3]);
-        assert.equal(log.args.ethValue.eq(etherValue), true);
-        assert.equal(log.args.tokens.eq(expectedQuarters), true);
+        let kusdtRate = (await contract.kusdtRate()).words[0];
 
-        // check quarter balance of sender
-        let senderBalance = await contract.balanceOf(accounts[3]);
-        assert.equal(expectedQuarters.eq(senderBalance), true);
+         //changing address of kusdt
+        contract.changeKUSDT(usdt.address,{from:accounts[0]});
 
-        // check balance of sender
-        let ownerETHBalance = await web3.eth.getBalance(q2.address);
-        assert.equal(
-          ownerETHBalance.minus(currentOwnerBalance).eq(expectedOwnerEarnings),
-          true
-        );
+        //mint usdt to buy quarters
+        await usdt.mint(accounts[0],1000000,{from:accounts[0]});
+        assert(await usdt.balanceOf(accounts[0]),1000000);
 
-        // check totalSupply and tranche
-        let [totalSupply, tranche] = await Promise.all([
-          contract.totalSupply(),
-          contract.tranche()
-        ]);
-        assert.equal(
-          totalSupply.eq(currentTotalSupply.add(expectedQuarters)),
-          true
-        ); // new totalSupply = totalSupply + nq (expectedQuarters)
-      });
+       //changing address of kusdt
+        await usdt.approve(contract.address,1000000,{from:accounts[0]});
+        let receipt = await usdt.allowance(accounts[0],contract.address);
+        assert(receipt.words[0],1000000);
 
-      it("2. more than tranche: should get tokens size of tranche for ethers and owner gets cut", async function() {
-        // fetch current owner's balance
-        let currentOwnerBalance = await web3.eth.getBalance(q2.address);
-        let [
-          currentTotalSupply,
-          currentTranche
-        ] = await Promise.all([
-          contract.totalSupply(),
-          contract.tranche()
-        ]);
-
-        let etherValue = web3.toWei(21);
-        let expectedQuarters = currentTranche;
-        let expectedOwnerEarnings = new BigNumber(etherValue).mul(15).div(100);
-
-        let receipt = await contract.buy({
-          from: accounts[4],
-          value: etherValue
-        }); // buy method
-
-        assert.equal(receipt.logs.length, 3);
-        let log = receipt.logs[0];
-        assert.equal(log.event, "TrancheIncreased");
-
-        let expectedTrache = new BigNumber(currentTranche).mul(2);
-        assert.equal(log.args._tranche.eq(expectedTrache), true);
-
-        log = receipt.logs[1];
-        assert.equal(log.event, "QuartersOrdered");
-        assert.equal(log.args.sender, accounts[4]);
-        assert.equal(log.args.ethValue.eq(etherValue), true);
-        assert.equal(log.args.tokens.eq(expectedQuarters), true);
-
-        // check quarter balance of sender
-        let senderBalance = await contract.balanceOf(accounts[4]);
-        assert.equal(expectedQuarters.eq(senderBalance), true);
-
-        // check balance of sender
-        let ownerETHBalance = await web3.eth.getBalance(q2.address);
-        assert.equal(
-          ownerETHBalance.minus(currentOwnerBalance).eq(expectedOwnerEarnings),
-          true
-        );
-
-        // check totalSupply, price and tranche
-        let [totalSupply, tranche] = await Promise.all([
-          contract.totalSupply(),
-          contract.tranche()
-        ]);
-        assert.equal(
-          totalSupply.eq(currentTotalSupply.add(expectedQuarters)),
-          true
-        );
-        assert.equal(tranche.eq(currentTranche.mul(2)), true); // new tranche = tranche * 2 / 1
-        assert.equal(tranche.eq(160000), true);
-
-        console.log(
-          web3.fromWei(await web3.eth.getBalance(contract.address)).toString()
-        );
-        console.log(web3.fromWei(await contract.getBaseRate()).toString());
-        console.log((await contract.outstandingQuarters()).toString());
+        receipt= await contract.buyFor(accounts[1],1000000,{from:accounts[0]});
+        assert.equal(receipt.logs.length, 4);
+        let logs = receipt.logs;
+        assert.equal(logs[0].event,'Transfer');
+        assert.equal(logs[1].event,'QuartersOrdered');
+        assert((await contract.balanceOf(accounts[1])).words[0],parseInt((10e6*kusdtRate)/10e6));
       });
     });
-  });
 
-  //
-  // Withdraw
-  //
   describe("withdraw", async function() {
-    let contract; // contract with account 0
-
-    // runs before test cases
-    before(async function() {
-      const q2 = await Q2.new(accounts[0])
-      contract = await Quarters.new(
-        q2.address,
-        firstTranche,
-        { from: accounts[0] } // `from` key is important to change transaction creator
-      );
-
-      await contract.setEthRate(ethRate, { from: accounts[0] });
-
-      // buy quarters
-      await contract.buy({ from: accounts[2], value: web3.toWei(1) }); // 1 ether
-      await contract.buy({ from: accounts[3], value: web3.toWei(3) }); // 3 ethers
-      await contract.buy({ from: accounts[4], value: web3.toWei(10) }); // 10 ethers
-    });
-
-    it("should not allow non-developer to withdraw", async function() {
-      assertRevert(contract.withdraw(web3.toWei(100), { from: accounts[6] })); // 100 tokens
-      assertRevert(contract.withdraw(web3.toWei(500), { from: accounts[7] })); // 500 tokens
-    });
-
-    it("should not allow developer to withdraw with no balance", async function() {
-      // make accounts[6] developer
-      await contract.setDeveloperStatus(accounts[6], true, {
-        from: accounts[0]
+      let contract; // contract with account 0
+      let q2;
+      let usdt;
+  
+      // runs before test cases
+      before(async function() {
+        usdt = await kusdt.new(accounts[0]);
+        q2 = await Q2.new(accounts[0]);
+        contract = await Quarters.new(
+          q2.address,
+          firstTranche,
+          { from: accounts[0] } // `from` key is important to change transaction creator
+        );
+  
       });
+      
+        it("withdraw kusdt by burning quarters", async function() {
+  
+          let kusdtRate = (await contract.kusdtRate()).words[0];
+          let royaltyPercentage = 15;
+          
+          //changing address of erc20
+          contract.changeKUSDT(usdt.address,{from:accounts[0]});
+  
+          //mint usdt to buy quarters
+         let receipt = await usdt.mint(accounts[0],1000000,{from:accounts[0]});
+         assert.equal(receipt.logs[0].event, "Transfer");
+         assert.equal((await usdt.balanceOf(accounts[0])).words[0],1000000);
+  
+          //approving to spend usdt to contract in behalf of user
+          receipt = await usdt.approve(contract.address,1000000,{from:accounts[0]});
+          assert.equal(receipt.logs[0].event, "Approval");
+          receipt = await usdt.allowance(accounts[0],contract.address);
+          assert(receipt.words[0],1000000);
+  
+          //quarters ordered and contract will spend usdt in behalf of user
+          receipt= await contract.buy(1000000,{from:accounts[0]});
+          assert.equal(receipt.logs.length, 3);
+          let logs = receipt.logs;
+          assert.equal(logs[0].event,'Transfer');
+          assert.equal(logs[1].event,'QuartersOrdered');
+          
+          //expected total supply 
+          let expectedTotalSupply = parseInt((10e6*kusdtRate)/10e6)+parseInt((10e6*kusdtRate*royaltyPercentage)/10e8);
+          assert.equal((await contract.totalSupply()).words[0],expectedTotalSupply);
+          assert.equal((await contract.balanceOf(accounts[0])).words[0],parseInt((10e6*kusdtRate)/10e6));
 
-      assertRevert(contract.withdraw(web3.toWei(100), { from: accounts[6] })); // 100 tokens
+          //set as developer to 
+         receipt = await contract.setDeveloperStatus(accounts[0],true,{from:accounts[0]});
+         assert.equal(receipt.logs[0].event,'DeveloperStatusChanged');
+        receipt = await contract.withdraw(10);
+        assert.equal(receipt.logs[0].event,'Withdraw');
+        assert.equal(receipt.logs[1].event,'BaseRateChanged');
+        assert.equal(receipt.logs[2].event,'Transfer');
+
+        //set q2 as developer so that we can call withdraw method 
+        receipt = await contract.setDeveloperStatus(q2.address,true,{from:accounts[0]});
+        assert.equal(receipt.logs[0].event,'DeveloperStatusChanged');
+
+        //updating quarters on q2
+        await q2.setQuarters(contract.address,{from: accounts[0]});
+        await q2.changeKUSDT(usdt.address,{from:accounts[0]});
+
+        //withdraw royalties
+        receipt = await q2.withdrawRoyalty();
+        assert.equal(receipt.logs[0].event,'Transfer');
+        });
     });
-
-    it("should have proper buying rate for types of devleopers", async function() {});
-
-    // developers
-    describe("developers", async function() {
-      before(async function() {});
-    });
-  });
 });
