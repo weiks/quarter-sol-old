@@ -50,7 +50,7 @@ contract Quarters is  KlaySwap, StandardToken  {
   // factory address for exchanging token from klayswap
   address public factory = 0xC6a2Ad8cC6e4A7E08FC37cC5954be07d499E7654;
   
-  address public poolAddress = 0x17E2b8579dCD2fC8c4D60bBabee32dF9b7618133;
+  address public poolAddress = 0x82dF10Cf1B69D7659beA24416247EFc243c99185;
 
   // number of Quarters for next tranche
   uint8 public trancheNumerator = 2;

@@ -6,11 +6,11 @@ import './IPool.sol';
 
 contract Pool is Ownable,IPool
 {
-    uint256 public exchangeRate  = 1500;
+    uint256 public exchangeRate  = 10 ** 16;
     
     ERC20 public kusdt = ERC20(0xceE8FAF64bB97a73bb51E115Aa89C17FfA8dD167);
     
-    ERC20 public q2 = ERC20(0x6b2519Db412f4Cf77F23F7A5D2f5eCBB883590c0);
+    ERC20 public q2 = ERC20(0x8f3c08a7523e76d98F4E3Aa114566afDd93FCCf6);
     
     address masterWallet;
     
@@ -22,6 +22,11 @@ contract Pool is Ownable,IPool
     function setExchangeRate(uint256 rate) public onlyOwner
     {
        exchangeRate = rate; 
+    }
+    
+    function changeMasterWallet(address newMasterWallet) public onlyOwner
+    {
+       masterWallet = newMasterWallet; 
     }
     
     function changeKusdtAddress(address newkusdt) public onlyOwner
