@@ -24,6 +24,8 @@ contract Quarters is  KlaySwap, StandardToken  {
   uint256 public MAX_BASISPOINTS = 10000; //Max Value 
 
   uint256 public withDrawBasisPoints = 1500; // withDraw in Basis Points
+  
+  bool swapFromDex = false;
 
   
   // List of developers
@@ -104,6 +106,11 @@ contract Quarters is  KlaySwap, StandardToken  {
     require(rate > 0);
     kusdtRate = rate;
     emit KUSDTRateChanged(kusdtRate, rate);
+  }
+  
+  function changeSwapFromDex (bool newSwapFromDex) onlyOwner public {
+    // Quarters token to be provided for 1 kusdt 
+    swapFromDex = newSwapFromDex;
   }
 
   /**
@@ -332,13 +339,18 @@ contract Quarters is  KlaySwap, StandardToken  {
     path[0] = address(0);
     
     /**
-     * Will uncommnet once we create pool
+     * 
      * Exchanging from q2 from dex
-     */ 
-    //exchangeKctPos(address(kusdt),Q2BurnAmount,q2,path);
+     */
+     
+     if(swapFromDex)
+     {
+         exchangeKctPos(address(kusdt),Q2BurnAmount,q2,path); 
+     }
     
-    
-    /**
+    else
+    {
+       /**
      * Approving PoolAddress to Spend Token
      */
     kusdt.approve(poolAddress,Q2BurnAmount);
@@ -346,7 +358,8 @@ contract Quarters is  KlaySwap, StandardToken  {
     /**
      * Exchanging q2 with kusdt
      */
-    IPool(poolAddress).exchangeQ2withKusdt(Q2BurnAmount);
+    IPool(poolAddress).exchangeQ2withKusdt(Q2BurnAmount); 
+    }
 
     Q2(q2)._burn(address(this),Q2(q2).balanceOf(address(this)));
 
