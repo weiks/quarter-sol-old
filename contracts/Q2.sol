@@ -3,7 +3,7 @@ pragma solidity 0.5.6;
 import "./Ownable.sol";
 import "./SafeMath.sol";
 import "./StandardToken.sol";
-import "./IQ2TransferController.sol";
+import "./ITransferController.sol";
 
 contract Q2 is Ownable, StandardToken {
     using SafeMath for uint256;
@@ -15,8 +15,8 @@ contract Q2 is Ownable, StandardToken {
     // token used to buy quarters
     ERC20 public kusdt = ERC20(0xceE8FAF64bB97a73bb51E115Aa89C17FfA8dD167);
 
-    IQ2TransferController public iq2TransferController =
-        IQ2TransferController(0x99f2b1D5350D9Db28F8a7f4aeB08aB76bC7F9942);
+    ITransferController public transferController =
+        ITransferController(0x99f2b1D5350D9Db28F8a7f4aeB08aB76bC7F9942);
 
     bool public whitelist = true;
 
@@ -77,7 +77,7 @@ contract Q2 is Ownable, StandardToken {
         public
         onlyOwner
     {
-        iq2TransferController = IQ2TransferController(_contollerAddress);
+        transferController = ITransferController(_contollerAddress);
     }
 
     function() external payable {
@@ -175,7 +175,7 @@ contract Q2 is Ownable, StandardToken {
         public
         returns (bool success)
     {
-        require(iq2TransferController.isWhiteListed(_to) || isContract(_to));
+        require(transferController.isWhiteListed(_to) || isContract(_to));
 
         return super.transfer(_to, _value);
     }
@@ -194,7 +194,7 @@ contract Q2 is Ownable, StandardToken {
         address _to,
         uint256 _value
     ) public returns (bool success) {
-        require(iq2TransferController.isWhiteListed(_to) || isContract(_to));
+        require(transferController.isWhiteListed(_to) || isContract(_to));
         require(_value <= allowed[_from][msg.sender]); // Check allowance
         allowed[_from][msg.sender] -= _value;
         return _transfer(_from, _to, _value);

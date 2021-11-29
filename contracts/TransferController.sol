@@ -1,10 +1,10 @@
 pragma solidity 0.5.6;
 import "./Ownable.sol";
-import "./IQ2TransferController.sol";
+import "./ITransferController.sol";
 
 //implementation to control transfer of q2
 
-contract Q2TransferController is IQ2TransferController, Ownable {
+contract TransferController is ITransferController, Ownable {
     mapping(address => bool) public whitelistedAddresses;
 
     mapping(address => bool) moderator;
