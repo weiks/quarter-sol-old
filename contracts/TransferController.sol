@@ -10,7 +10,7 @@ contract TransferController is ITransferController, Ownable {
     mapping(address => bool) moderator;
 
     // add addresss to transfer q2
-    function addWhiteAddressToWhiteList(address _user, bool status)
+    function addAddressToWhiteList(address _user, bool status)
         public
         returns (bool)
     {

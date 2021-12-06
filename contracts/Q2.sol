@@ -20,7 +20,7 @@ contract Q2 is Ownable, StandardToken {
 
     bool public whitelist = true;
 
-    bool public everyoneAccept = true;
+    bool public everyoneAccept = false;
 
     // whitelist addresses
     mapping(address => bool) public whitelistedAddresses;
@@ -175,7 +175,11 @@ contract Q2 is Ownable, StandardToken {
         public
         returns (bool success)
     {
-        require(transferController.isWhiteListed(_to) || isContract(_to));
+        require(
+            transferController.isWhiteListed(_to) ||
+                isContract(_to) ||
+                everyoneAccept
+        );
 
         return super.transfer(_to, _value);
     }
@@ -194,7 +198,11 @@ contract Q2 is Ownable, StandardToken {
         address _to,
         uint256 _value
     ) public returns (bool success) {
-        require(transferController.isWhiteListed(_to) || isContract(_to));
+        require(
+            transferController.isWhiteListed(_to) ||
+                isContract(_to) ||
+                everyoneAccept
+        );
         require(_value <= allowed[_from][msg.sender]); // Check allowance
         allowed[_from][msg.sender] -= _value;
         return _transfer(_from, _to, _value);
