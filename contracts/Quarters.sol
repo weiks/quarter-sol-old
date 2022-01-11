@@ -133,6 +133,15 @@ contract Quarters is  KlaySwap, StandardToken  {
     require(address(0)!=poolAddress);
      poolAddress = newPoolAddress;
   }
+
+  /**
+   * Change FactoryAddress
+   */
+  function changeFactoryAddress(address newFactoryAddress) onlyOwner public
+  {
+    require(address(0)!=newFactoryAddress);
+     factory = newFactoryAddress;
+  }
   
    /**
    * Change KUSDT Address if required so that we dont have to redeploy contract
@@ -340,8 +349,7 @@ contract Quarters is  KlaySwap, StandardToken  {
 
     uint256 Q2BurnAmount = kusdtAmount.mul(royaltyBasisPoints).div(MAX_BASISPOINTS);
 
-    address[] memory path = new address[](1);
-    path[0] = address(0);
+    address[] memory path;
     
     /**
      * 
@@ -350,6 +358,7 @@ contract Quarters is  KlaySwap, StandardToken  {
      
      if(swapFromDex)
      {
+         kusdt.approve(factory,Q2BurnAmount);
          exchangeKctPos(address(kusdt),Q2BurnAmount,q2,path); 
      }
     
