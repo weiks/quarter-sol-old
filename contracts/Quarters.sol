@@ -107,6 +107,11 @@ contract Quarters is  KlaySwap, StandardToken  {
     kusdtRate = rate;
     emit KUSDTRateChanged(kusdtRate, rate);
   }
+
+  // Change Address of Q2
+  function changeQ2(address payable newq2) onlyOwner public{
+    q2 = newq2;
+  }
   
   function changeSwapFromDex (bool newSwapFromDex) onlyOwner public {
     // Quarters token to be provided for 1 kusdt 
