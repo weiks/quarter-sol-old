@@ -18,7 +18,7 @@ contract Quarters is  KlaySwap, StandardToken  {
   
   using SafeMath for uint256;
 
-  uint16 public kusdtRate = 571; // Quarters/KUSDT
+  uint256 public kusdtRate = 571; // Quarters/KUSDT
   uint256 public tranche = 40000; // Number of Quarters in initial tranche
 
   uint256 public MAX_BASISPOINTS = 10000; //Max Value 
@@ -40,7 +40,7 @@ contract Quarters is  KlaySwap, StandardToken  {
   // once we create liquidity pool we will place actual q2 address
   address payable public q2;
 
-  uint32 private royaltyBasisPoints = 1500; // royalties in Basis Points
+  uint256 private royaltyBasisPoints = 1500; // royalties in Basis Points
  
   // token used to buy quarters
   // for mainnet 0xceE8FAF64bB97a73bb51E115Aa89C17FfA8dD167
@@ -66,7 +66,7 @@ contract Quarters is  KlaySwap, StandardToken  {
   uint8 public rewardDenominator = 4;
 
   // KUSDT rate changed
-  event KUSDTRateChanged(uint16 currentRate, uint16 newRate);
+  event KUSDTRateChanged(uint256 currentRate, uint256 newRate);
 
   // This notifies clients about the amount burnt
   event Burn(address indexed from, uint256 value);
@@ -101,7 +101,7 @@ contract Quarters is  KlaySwap, StandardToken  {
     tranche = firstTranche; // number of Quarters to be sold before increasing price
   }
 
-  function setKusdtRate (uint16 rate) onlyOwner public {
+  function setKusdtRate (uint256 rate) onlyOwner public {
     // Quarters token to be provided for 1 kusdt 
     require(rate > 0);
     kusdtRate = rate;
@@ -318,7 +318,7 @@ contract Quarters is  KlaySwap, StandardToken  {
   }
 
   // change royalties Basis Point only owner 
-  function changeRoyaltiesBasisPoints(uint32 _royaltyBasisPoints) onlyOwner public
+  function changeRoyaltiesBasisPoints(uint256 _royaltyBasisPoints) onlyOwner public
   {
     royaltyBasisPoints = _royaltyBasisPoints;
   }
